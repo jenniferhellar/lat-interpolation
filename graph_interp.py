@@ -142,6 +142,7 @@ for tr_i, tst_i in kf12.split(SAMP_IDX):
 			y[i] = LAT[i]
 			M_l[i,i] = float(1)
 		else:
+			y[i] = 0
 			M_u[i,i] = float(1)
 
 			
@@ -213,10 +214,8 @@ print('\n\nMSE:\t' + str(avgMSE))
 print('WMSE:\t' + str(avgWMSE))
 
 snr = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*avgMSE))
-snrW = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*avgWMSE))	# https://doi.org/10.1190/geo2017-0495.1, https://arxiv.org/pdf/1511.05440.pdf, https://arxiv.org/abs/1804.06919v1
-"""
-Bao, Wenbo, et al. "Depth-aware video frame interpolation." Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. 2019.
-"""
+snrW = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*avgWMSE))
+
 print('\n\nSNR:\t' + str(snr))
 print('WSNR:\t' + str(snrW))
 
@@ -264,8 +263,8 @@ axes = ax.flatten()
 
 # Plot true LAT signal
 thisAx = axes[0]
-thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-# thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey')
+# thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
+thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey')
 pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=SAMP_LAT, cmap='rainbow_r', vmin=-200, vmax=50, s = 20)
 
 thisAx.set_title('LAT Signal (True)')
@@ -282,7 +281,6 @@ out = yhat[SAMP_IDX]
 pltSig = out
 pltCoord = SAMP_COORD
 pltCoord = np.array(pltCoord)
-
 
 thisAx = axes[1]
 thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)

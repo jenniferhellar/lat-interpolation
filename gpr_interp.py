@@ -1,43 +1,235 @@
 import numpy as np
 
+# plotting packages
 import matplotlib.pyplot as plt
+import matplotlib.tri as mtri
 
+# KD-Tree for mapping to nearest point
+from scipy.spatial import cKDTree
+
+# cross-validation package
+from sklearn.model_selection import KFold
+
+# nearest-neighbor interpolation
+from scipy.interpolate import griddata
+
+# Gaussian process regression interpolation
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared
+from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared, RBF
 
-rng = np.random.RandomState(0)
+# functions to read the files
+from readMesh import readMesh
+from readLAT import readLAT
 
-# Generate sample data
-X = 15 * rng.rand(100, 1)
-y = np.sin(X).ravel()
-y += 3 * (0.5 - rng.rand(X.shape[0]))  # add noise
 
-gp_kernel = ExpSineSquared(1.0, 5.0, periodicity_bounds=(1e-2, 1e1)) \
-    + WhiteKernel(1e-1)
-gpr = GaussianProcessRegressor(kernel=gp_kernel)
-gpr.fit(X, y)
+WRAP			=		0
 
-# Predict using kernel ridge
-X_plot = np.linspace(0, 20, 10000)[:, None]
 
-# Predict using gaussian process regressor
-y_gpr = gpr.predict(X_plot, return_std=False)
+dataDir = 'data/'
+meshNames = ['Patient037_I_MESHData9-RV SINUS VOLTAGE.mesh']
+latNames = ['Patient037_I_LATSpatialData_9-RV SINUS VOLTAGE_car.txt']
 
-y_gpr, y_std = gpr.predict(X_plot, return_std=True)
+i = 0
 
-# Plot results
-plt.figure(figsize=(10, 5))
-lw = 2
-plt.scatter(X, y, c='k', label='data')
-plt.plot(X_plot, np.sin(X_plot), color='navy', lw=lw, label='True')
-plt.plot(X_plot, y_gpr, color='darkorange', lw=lw,
-         label='GPR (%s)' % gpr.kernel_)
-plt.fill_between(X_plot[:, 0], y_gpr - y_std, y_gpr + y_std, color='darkorange',
-                 alpha=0.2)
-plt.xlabel('data')
-plt.ylabel('target')
-plt.xlim(0, 20)
-plt.ylim(-4, 4)
-plt.title('GPR')
-plt.legend(loc="best",  scatterpoints=1, prop={'size': 8})
+""" Read the files """
+meshFile = meshNames[i]
+latFile = latNames[i]
+nm = meshFile[0:-5]
+
+print('Reading files for ' + nm + ' ...')
+[coordinateMatrix, connectivityMatrix] = readMesh(dataDir + meshFile)
+[latCoords, latVals] = readLAT(dataDir + latFile)
+
+N = len(coordinateMatrix)	# number of vertices in the graph
+M = len(latCoords)			# number of signal samples
+
+IDX = [i for i in range(N)]
+COORD = [coordinateMatrix[i] for i in IDX]
+
+# Map data points to mesh coordinates
+coordKDtree = cKDTree(coordinateMatrix)
+[dist, idxs] = coordKDtree.query(latCoords, k=1)
+
+IS_SAMP = [False for i in range(N)]
+LAT = [0 for i in range(N)]
+for i in range(M):
+	verIdx = idxs[i]
+	IS_SAMP[verIdx] = True
+	LAT[verIdx] = latVals[i]
+
+SAMP_IDX = [IDX[i] for i in range(N) if IS_SAMP[i] is True]
+SAMP_COORD = [COORD[i] for i in range(N) if IS_SAMP[i] is True]
+SAMP_LAT = [LAT[i] for i in range(N) if IS_SAMP[i] is True]
+
+M = len(SAMP_IDX)
+
+
+gp_kernel = RBF()
+gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
+
+
+
+""" Cross-validation """
+
+folds = 10
+kf12 = KFold(n_splits=folds, shuffle=True)
+
+fold = 0
+yhatGPR = np.zeros((N,1))
+
+for tr_i, tst_i in kf12.split(SAMP_IDX):
+	# number of labelled and unlabelled vertices in this fold
+	trLen = len(tr_i)
+	tstLen = len(tst_i)
+
+	print('\nFold ' + str(fold) + '\t# of labelled vertices: ' + str(trLen) + '\t# of unlabelled vertices: ' + str(tstLen))
+
+	# get vertex indices of labelled/unlabelled nodes
+	TrIdx = sorted(np.take(SAMP_IDX, tr_i))
+	TstIdx = sorted(np.take(SAMP_IDX, tst_i))
+
+	# get vertex coordinates
+	TrCoord = [COORD[i] for i in TrIdx]
+	TstCoord = [COORD[i] for i in TstIdx]
+
+	# get LAT signal values
+	TrVal = [LAT[i] for i in TrIdx]
+	TstVal = [LAT[i] for i in TstIdx]
+
+	# Compute nearest neighbor estimate for unlabelled vertices in this fold
+	gpr.fit(TrCoord, TrVal)
+	yhatGPRfold = gpr.predict(TstCoord, return_std=False)
+
+	# Calculate the mean squared error for this fold
+	mseGPR = 0
+	for i in range(tstLen):
+		# vertex index
+		verIdx = TstIdx[i]
+
+		latEst = yhatGPRfold[i]
+		latTrue = LAT[verIdx]
+
+		# calculate error
+		if WRAP:
+			err = abs(latEst - latTrue)
+			rng = max(TrVal) - min(TrVal)
+			err = min(err, rng - err)
+		else:
+			err = abs(latEst - latTrue)
+
+		# save the estimated value and error for this vertex
+		yhatGPR[verIdx] = latEst
+
+		# accumulate squared error
+		mseGPR += (err ** 2)
+	# average the squared error
+	mseGPR = mseGPR/tstLen
+	print('GPR-Estimate MSE:\t' + str(mseGPR))
+
+	fold += 1
+
+if WRAP:
+	rng = max(LAT)-min(LAT)
+	errVec = [yhatGPR[i]-LAT[i] for i in range(N) if IS_SAMP[i] is True]
+	errVec = abs(np.array(errVec))
+	errVecGPR = [min(errVec[i], rng - errVec[i]) for i in range(M)]
+	errVecGPR = np.array(errVecGPR)
+else:
+	Vec = [abs(yhatGPR[i] - LAT[i]) for i in range(N) if IS_SAMP[i] is True]
+	# mxerr = (round(max(errVec)[0]/10)+1)*10
+	# n, bins = np.histogram(errVec, range=(0, mxerr))
+	n, bins = np.histogram(Vec, bins=25, range=(0, 250))
+	# print(bins)
+	freq = n/sum(n)
+
+	errVecGPR = []
+	for i in range(M):
+		elem = Vec[i]
+		for j, val in enumerate(bins):
+			if val > elem:
+				idx = j - 1
+				break
+		weightedErr = elem*freq[idx]
+		errVecGPR.append(weightedErr)
+	errVecWGPR = np.array(errVecGPR)
+	errVecGPR = np.array(Vec)
+
+avgMSE = 1/M*np.sum(errVecGPR ** 2)
+avgWMSE = 1/M*np.sum(errVecWGPR ** 2)
+
+print('\n\nMSE:\t' + str(avgMSE))
+print('WMSE:\t' + str(avgWMSE))
+
+snr = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/np.sum(errVecGPR ** 2))
+snrW = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/np.sum(errVecWGPR ** 2))
+
+print('\n\nSNR:\t' + str(snr))
+print('WSNR:\t' + str(snrW))
+
+# print('\n\nFraction of total with <15ms error:\t' + str(np.sum(abs(errVecNN) < 15)/M))
+# print('Fraction of total with <10ms error:\t' + str(np.sum(abs(errVecNN) < 10)/M))
+# print('Fraction of total with <5ms error:\t' + str(np.sum(abs(errVecNN) < 5)/M))
+
+x = [i for i in range(M)]
+
+fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16,8))
+axes = ax.flatten()
+
+thisAx = axes[0]
+thisAx.scatter(x, errVecGPR)
+thisAx.set_title('|Error|')
+thisAx.set_xlabel('Vertex')
+thisAx.set_ylabel('Error (ms)')
+
+thisAx = axes[1]
+thisAx.scatter(x, errVecWGPR)
+thisAx.set_title('|Error|*(frequency of error)')
+thisAx.set_xlabel('Vertex')
+thisAx.set_ylabel('Error Weighted by Occurrence Frequency\nbin width='+str(250/(len(bins)-1))+'ms')
+	
+plt.show()
+
+# n, bins, patches = plt.hist(x=errVecNN, bins='auto', color='#0504aa', rwidth=0.85)
+# plt.grid(axis='y', alpha=0.75)
+# plt.xlabel('Error')
+# plt.ylabel('Frequency')
+# plt.title('NN Estimation Error Histogram')
+# # plt.text(23, 45, r'$\alpha=0.1, \beta=1$')
+# maxfreq = n.max()
+# # Set a clean upper y-axis limit.
+# plt.ylim(ymax=np.ceil(maxfreq / 10) * 10 if maxfreq % 10 else maxfreq + 10)
+# plt.show()
+
+
+
+pltCoord = np.array(SAMP_COORD)
+triang = mtri.Triangulation(coordinateMatrix[:,0], coordinateMatrix[:,1], triangles=connectivityMatrix)
+
+fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16, 8), subplot_kw=dict(projection="3d"))
+axes = ax.flatten()
+
+# Plot true LAT signal
+thisAx = axes[0]
+thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
+pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=SAMP_LAT, cmap='rainbow_r', vmin=-200, vmax=50, s = 20)
+
+thisAx.set_title('LAT Signal (True)')
+thisAx.set_xlabel('X', fontweight ='bold') 
+thisAx.set_ylabel('Y', fontweight ='bold') 
+thisAx.set_zlabel('Z', fontweight ='bold')
+cax = fig.add_axes([thisAx.get_position().x0+0.015,thisAx.get_position().y0-0.05,thisAx.get_position().width,0.01])
+plt.colorbar(pos, cax=cax, label='LAT (ms)', orientation="horizontal")
+
+# Plot overall estimated LAT signal (aggregated from computation in each fold)
+thisAx = axes[1]
+thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
+pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=yhatGPR[SAMP_IDX], cmap='rainbow_r', vmin=-200, vmax=50, s = 20)
+
+thisAx.set_title('LAT Signal (Estimated)')
+thisAx.set_xlabel('X', fontweight ='bold') 
+thisAx.set_ylabel('Y', fontweight ='bold') 
+thisAx.set_zlabel('Z', fontweight ='bold')
+# cax = fig.add_axes([thisAx.get_position().x1+0.03,thisAx.get_position().y0,0.01,thisAx.get_position().height]) # vertical bar to the right
+cax = fig.add_axes([thisAx.get_position().x0+0.015,thisAx.get_position().y0-0.05,thisAx.get_position().width,0.01]) # horiz bar on the bottom
+plt.colorbar(pos, cax=cax, label='LAT (ms)', orientation="horizontal")
 plt.show()

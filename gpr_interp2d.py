@@ -32,7 +32,7 @@ for i in range(x.shape[0]):
 
 # gp_kernel = ExpSineSquared()
 gp_kernel = RBF()
-gpr = GaussianProcessRegressor(kernel=gp_kernel)
+gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
 gpr.fit(X, out)
 
 x_plot = np.arange(-5, 5, 0.1)
@@ -60,6 +60,15 @@ for i in range(x_plot.shape[0]):
 z_out = np.array(z_out)
 
 z_true = xx_plot**2 + yy_plot**2
+
+err = abs(z_out - z_true)
+M = x_plot.shape[0]*y_plot.shape[0]
+
+mse = 1/M*np.sum(err)
+print(mse)
+
+snr = 20*np.log10(np.sum(z_true ** 2)/(M*mse))
+print(snr)
 
 fig, ax = plt.subplots(nrows = 1, ncols = 3, figsize=(16, 8), subplot_kw=dict(projection="3d"))
 axes = ax.flatten()
