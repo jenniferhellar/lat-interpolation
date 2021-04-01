@@ -119,7 +119,7 @@ fid.close()
 
 """ Cross-validation """
 
-folds = 2
+folds = 10
 kf12 = KFold(n_splits=folds, shuffle=True)
 
 mse = np.zeros((len(alphas), len(betas)))
@@ -202,6 +202,8 @@ for a_idx in range(len(alphas)):
 
 		snr[a_idx][b_idx] = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*mse[a_idx][b_idx]))
 		wsnr[a_idx][b_idx] = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*wmse[a_idx][b_idx]))
+
+                print('%.2f %.2f %.2f %.2f', mse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx], wsnr[a_idx][b_idx])
 
 print()
 
