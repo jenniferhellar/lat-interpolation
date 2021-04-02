@@ -96,8 +96,8 @@ L = D - A
 
 
 """ Hyperparameters """
-alphas = [0.1, 1.0, 5.0, 10.0, 100.0, 1000.0]
-betas = [0.1, 1.0, 5.0, 10.0, 100.0, 1000.0]
+alphas = [0.1, 1.0, 5.0]
+betas = [0.1, 1.0, 5.0]
 
 # alphas = [0.1, 1.0]
 # betas = [0.1]
@@ -203,7 +203,7 @@ for a_idx in range(len(alphas)):
 		snr[a_idx][b_idx] = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*mse[a_idx][b_idx]))
 		wsnr[a_idx][b_idx] = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*wmse[a_idx][b_idx]))
 
-                print('%.2f %.2f %.2f %.2f', mse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx], wsnr[a_idx][b_idx])
+		print('%.2f %.2f %.2f %.2f', mse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx], wsnr[a_idx][b_idx])
 
 print()
 
