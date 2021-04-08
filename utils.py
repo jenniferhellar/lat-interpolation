@@ -86,9 +86,12 @@ def pltEigenvalues(lambdas):
 	plt.show()
 
 
-def getE(connectivityMatrix):
+def getE(coordinateMatrix, connectivityMatrix, LAT, thresh):
 	edges = []
 	triangles = []
+
+	excl_edges = []
+	excl_midpt = []
 	for tri in connectivityMatrix:
 
 		idx0 = int(tri[0])
@@ -96,26 +99,53 @@ def getE(connectivityMatrix):
 		idx2 = int(tri[2])
 
 		e1 = set([idx0, idx1])
+		e1_lat = abs(LAT[idx0] - LAT[idx1])
 		e2 = set([idx1, idx2])
+		e2_lat = abs(LAT[idx1] - LAT[idx2])
 		e3 = set([idx0, idx2])
+		e3_lat = abs(LAT[idx0] - LAT[idx2])
 
-		if e1 not in edges:
-			edges.append(e1)
-			triangles.append([tri])
+		if (e1 not in edges):
+			if (e1 not in excl_edges):
+				if (e1_lat < thresh):
+					edges.append(e1)
+					triangles.append([tri])
+				else:
+					[x1, y1, z1] = coordinateMatrix[idx0, :]
+					[x2, y2, z2] = coordinateMatrix[idx1, :]
+					[x, y, z] = [float(x1+x2)/2, float(y1+y2)/2, float(z1+z2)/2]
+					excl_edges.append(e1)
+					excl_midpt.append([x, y, z])
 		else:
 			k = edges.index(e1)
 			triangles[k].append(tri)
 
-		if e2 not in edges:
-			edges.append(e2)
-			triangles.append([tri])
+		if (e2 not in edges):
+			if (e2 not in excl_edges):
+				if (e2_lat < thresh):
+					edges.append(e2)
+					triangles.append([tri])
+				else:
+					[x1, y1, z1] = coordinateMatrix[idx1, :]
+					[x2, y2, z2] = coordinateMatrix[idx2, :]
+					[x, y, z] = [float(x1+x2)/2, float(y1+y2)/2, float(z1+z2)/2]
+					excl_edges.append(e2)
+					excl_midpt.append([x, y, z])
 		else:
 			k = edges.index(e2)
 			triangles[k].append(tri)
 
-		if e3 not in edges:
-			edges.append(e3)
-			triangles.append([tri])
+		if (e3 not in edges):
+			if (e3 not in excl_edges):
+				if (e3_lat < thresh):
+					edges.append(e3)
+					triangles.append([tri])
+				else:
+					[x1, y1, z1] = coordinateMatrix[idx0, :]
+					[x2, y2, z2] = coordinateMatrix[idx2, :]
+					[x, y, z] = [float(x1+x2)/2, float(y1+y2)/2, float(z1+z2)/2]
+					excl_edges.append(e3)
+					excl_midpt.append([x, y, z])
 		else:
 			k = edges.index(e3)
 			triangles[k].append(tri)
@@ -124,7 +154,7 @@ def getE(connectivityMatrix):
 	# 	if len(tri2) != 2:
 	# 		print(tri2)
 
-	return [np.array(edges), triangles]
+	return [np.array(edges), triangles, np.array(excl_midpt)]
 
 
 def getUnWeightedAdj(coordinateMatrix, edges, triangles):
@@ -144,6 +174,29 @@ def getUnWeightedAdj(coordinateMatrix, edges, triangles):
 
 
 def getAdjMatrix(coordinateMatrix, edges, triangles):
+	N = len(coordinateMatrix)
+	A = np.zeros((N, N))
+
+	for i in range(len(edges)):
+
+		e = edges[i]
+		
+		e = list(e)	
+		v_i = e[0]
+		v_j = e[1]
+
+		[x1, y1, z1] = coordinateMatrix[v_i, :]
+		[x2, y2, z2] = coordinateMatrix[v_j, :]
+
+		w_ij = 1/math.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
+
+		A[v_i, v_j] = w_ij
+		A[v_j, v_i] = w_ij
+
+	return A
+
+
+def getAdjMatrixCotan(coordinateMatrix, edges, triangles):
 	N = len(coordinateMatrix)
 	A = np.zeros((N, N))
 
@@ -189,3 +242,19 @@ def getAdjMatrix(coordinateMatrix, edges, triangles):
 		A[v_j, v_i] = w_ij
 
 	return A
+
+
+def pltAdjMatrix(A, first, numV, title):
+
+	end = first + numV + 1;
+
+	fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(16, 8))
+	pos = ax.imshow(A[first:end, first:end], cmap='Blues', interpolation=None)
+	plt.xticks(np.arange(first, end, step=1))
+	plt.yticks(np.arange(first, end, step=1))
+	plt.title(title + '\nVertices ' + str(first) + ' - ' + str(end-1))
+	# plt.colorbar(hm)
+	# cax = fig.add_axes([ax.get_position().x0,ax.get_position().y0-0.1,ax.get_position().width,0.01])
+	cax = fig.add_axes([ax.get_position().x1+0.03,ax.get_position().y0,0.01,ax.get_position().height])
+	plt.colorbar(pos, cax=cax, label='weight')
+	# plt.show()

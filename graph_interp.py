@@ -25,20 +25,19 @@ from readLAT import readLAT
 
 
 from utils import *
+from const import *
 
 
-WRAP				=		0
+PLOT_EDGE_MOD		=		0
+PLOT_ERROR_VEC		=		0
+PLOT_OUTPUT			=		1
 
-
-dataDir = 'data/'
-meshNames = ['Patient037_I_MESHData9-RV SINUS VOLTAGE.mesh']
-latNames = ['Patient037_I_LATSpatialData_9-RV SINUS VOLTAGE_car.txt']
-
-i = 0
+# 20 is the one I have been working with
+mapIdx = 20
 
 """ Read the files """
-meshFile = meshNames[i]
-latFile = latNames[i]
+meshFile = meshNames[mapIdx]
+latFile = latNames[mapIdx]
 nm = meshFile[0:-5]
 
 print('Reading files for ' + nm + ' ...')
@@ -47,6 +46,10 @@ print('Reading files for ' + nm + ' ...')
 
 N = len(coordinateMatrix)	# number of vertices in the graph
 M = len(latCoords)			# number of signal samples
+
+if N > 11000:
+	print('Graph too large!')
+	exit(0)
 
 IDX = [i for i in range(N)]
 COORD = [coordinateMatrix[i] for i in IDX]
@@ -68,6 +71,29 @@ SAMP_LAT = [LAT[i] for i in range(N) if IS_SAMP[i] is True]
 
 M = len(SAMP_IDX)
 
+# Assign unknown coordinates an initial value of the nearest known point
+UNKNOWN = [COORD[i] for i in range(N) if IS_SAMP[i] is False]
+UNKNOWN = griddata(np.array(SAMP_COORD), np.array(SAMP_LAT), np.array(UNKNOWN), method='nearest')
+currIdx = 0
+for i in range(N):
+	if IS_SAMP[i] is False:
+		LAT[i] = UNKNOWN[currIdx]
+		currIdx += 1
+
+# For colorbar ranges
+MINLAT = math.floor(min(SAMP_LAT)/10)*10
+MAXLAT = math.ceil(max(SAMP_LAT)/10)*10
+
+# Figure view
+elev = 24
+azim = -135
+
+# elev = 70
+# azim = 45
+
+# azim = -180
+# elev = -75
+
 
 """
 Get edges and corresponding adjacent triangles.
@@ -75,8 +101,36 @@ Get edges and corresponding adjacent triangles.
 edges: list of edges, edge = set(v_i, v_j)
 triangles: list of corr. triangles adj to each edge, tri = (v_i, v_j, v_k)
 """
+
 print('Generating edge matrix ...')
-[EDGES, TRI] = getE(connectivityMatrix, LAT)
+[EDGES, TRI, excl_midpt] = getE(coordinateMatrix, connectivityMatrix, LAT, 50)
+
+if PLOT_EDGE_MOD:
+	fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(16, 8), subplot_kw=dict(projection="3d"))
+	pltCoord = np.array(SAMP_COORD)
+
+	triang = mtri.Triangulation(coordinateMatrix[:,0], coordinateMatrix[:,1], triangles=connectivityMatrix)
+	ax.plot_trisurf(triang, coordinateMatrix[:,2], color=(0,0,0,0), edgecolor='k', linewidth=.1)
+	pos = ax.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=SAMP_LAT, cmap='rainbow_r', vmin=MINLAT, vmax=MAXLAT, s = 20)
+
+	# for i in range(S_N):
+	# 	txt = str(S_IDX[i])
+	# 	ax.text(coordinateMatrix[i,0], coordinateMatrix[i,1], coordinateMatrix[i,2], txt)
+
+	for i in range(len(excl_midpt)):
+		txt = 'x'
+		ax.text(excl_midpt[i,0], excl_midpt[i,1], excl_midpt[i,2], txt, color='k', fontsize='x-small')
+
+	ax.set_title('Section of Interest')
+	ax.set_xlabel('X', fontweight ='bold') 
+	ax.set_ylabel('Y', fontweight ='bold') 
+	ax.set_zlabel('Z', fontweight ='bold')
+	ax.view_init(elev, azim)
+	# cax = fig.add_axes([thisAx.get_position().x1+0.03,thisAx.get_position().y0,0.01,thisAx.get_position().height]) # vertical bar to the right
+	cax = fig.add_axes([ax.get_position().x0+0.015,ax.get_position().y0-0.05,ax.get_position().width,0.01]) # horiz bar on the bottom
+	plt.colorbar(pos, cax=cax, label='LAT (ms)', orientation="horizontal")
+	# plt.show()
+	# exit()
 
 
 """ 
@@ -91,13 +145,18 @@ L: NxN Laplace matrix
 print('Calculating adjacency matrices ...')
 A = getUnWeightedAdj(coordinateMatrix, EDGES, TRI)
 W = getAdjMatrix(coordinateMatrix, EDGES, TRI)
+W1 = getAdjMatrixCotan(coordinateMatrix, EDGES, TRI)
+
+# pltAdjMatrix(W, 0, 20, 'W(i,j) = 1/d(i,j)')
+# pltAdjMatrix(W1, 0, 20, 'Cotangent Weights')
 
 D = np.diag(A.sum(axis=1))
 I = np.identity(N)
 
 print('Calculating Laplacian matrix ...')
-# L = D - W
 L = D - A
+# L = D - W
+# L = D - W1
 
 
 """ Hyperparameters """
@@ -115,8 +174,6 @@ fold = 0
 yhat = np.zeros((N,1))
 
 for tr_i, tst_i in kf12.split(SAMP_IDX):
-
-	print('\nFold ' + str(fold))
 
 	y = np.zeros((N,1))
 	M_l = np.zeros((N,N))
@@ -162,12 +219,7 @@ for tr_i, tst_i in kf12.split(SAMP_IDX):
 		latEst = yhatFold[i]
 		latTrue = LAT[verIdx]
 
-		if WRAP:
-			err = abs(latEst - latTrue)
-			rng = max(TrVal) - min(TrVal)
-			err = min(err, rng - err)
-		else:
-			err = abs(latEst - latTrue)
+		err = abs(latEst - latTrue)
 
 		# save the estimated value and error for this vertex
 		yhat[verIdx] = latEst
@@ -176,37 +228,29 @@ for tr_i, tst_i in kf12.split(SAMP_IDX):
 		mse += (err ** 2)
 	# average the squared error
 	mse = mse/tstLen
-	print('Graph-Estimate MSE:\t' + str(mse))
+	nmse = float(mse*tstLen/np.sum((np.array(TstVal) - np.mean(TstVal)) ** 2))
+	print('Fold {:g}, NMSE:\t{:.2f}'.format(fold, nmse))
 
 	fold += 1
 
-# errVec = np.array([yhat[i] - LAT[i] for i in range(N) if IS_SAMP[i] is True])
+Vec = [abs(yhat[i] - LAT[i]) for i in range(N) if IS_SAMP[i] is True]
+# mxerr = (round(max(Vec)[0]/10)+1)*10
+# n, bins = np.histogram(Vec, range=(0, mxerr))
+n, bins = np.histogram(Vec, bins=25, range=(0, 250))
+# print(bins)
+freq = n/sum(n)
 
-if WRAP:
-	rng = max(LAT)-min(LAT)
-	errVec = [yhat[i]-LAT[i] for i in range(N) if IS_SAMP[i] is True]
-	errVec = abs(np.array(errVec))
-	errVec = [min(errVec[i], rng - errVec[i]) for i in range(M)]
-	errVec = np.array(errVec)
-else:
-	Vec = [abs(yhat[i] - LAT[i]) for i in range(N) if IS_SAMP[i] is True]
-	# mxerr = (round(max(Vec)[0]/10)+1)*10
-	# n, bins = np.histogram(Vec, range=(0, mxerr))
-	n, bins = np.histogram(Vec, bins=25, range=(0, 250))
-	# print(bins)
-	freq = n/sum(n)
-
-	errVecW = []
-	for i in range(M):
-		elem = Vec[i]
-		for j, val in enumerate(bins):
-			if val > elem:
-				idx = j - 1
-				break
-		weightedErr = elem*freq[idx]
-		errVecW.append(weightedErr)
-	errVecW = np.array(errVecW)
-	errVec = np.array(Vec)
+errVecW = []
+for i in range(M):
+	elem = Vec[i]
+	for j, val in enumerate(bins):
+		if val > elem:
+			idx = j - 1
+			break
+	weightedErr = elem*freq[idx]
+	errVecW.append(weightedErr)
+errVecW = np.array(errVecW)
+errVec = np.array(Vec)
 
 sigPower = np.sum((np.array(SAMP_LAT) - np.mean(SAMP_LAT)) ** 2)
 
@@ -231,28 +275,25 @@ print('\n\nWMSE:\t{:.2f}'.format(wmse))
 print('WSNR:\t{:.2f}'.format(wsnr))
 
 
-# print('\n\nFraction of total with <15ms estimation error:\t' + str(np.sum(abs(errVec) < 15)/M))
-# print('Fraction of total with <10ms estimation error:\t' + str(np.sum(abs(errVec) < 10)/M))
-# print('Fraction of total with <5ms estimation error:\t' + str(np.sum(abs(errVec) < 5)/M))
+if PLOT_ERROR_VEC:
+	x = [i for i in range(M)]
 
-x = [i for i in range(M)]
+	fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16,8))
+	axes = ax.flatten()
 
-fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16,8))
-axes = ax.flatten()
+	thisAx = axes[0]
+	thisAx.scatter(x, errVec)
+	thisAx.set_title('|Error|')
+	thisAx.set_xlabel('Vertex')
+	thisAx.set_ylabel('Error (ms)')
 
-thisAx = axes[0]
-thisAx.scatter(x, errVec)
-thisAx.set_title('|Error|')
-thisAx.set_xlabel('Vertex')
-thisAx.set_ylabel('Error (ms)')
-
-thisAx = axes[1]
-thisAx.scatter(x, errVecW)
-thisAx.set_title('|Error|*(frequency of error)')
-thisAx.set_xlabel('Vertex')
-thisAx.set_ylabel('Error Weighted by Occurrence Frequency\nbin width='+str(250/(len(bins)-1))+'ms')
-	
-plt.show()
+	thisAx = axes[1]
+	thisAx.scatter(x, errVecW)
+	thisAx.set_title('|Error|*(frequency of error)')
+	thisAx.set_xlabel('Vertex')
+	thisAx.set_ylabel('Error Weighted by Occurrence Frequency\nbin width='+str(250/(len(bins)-1))+'ms')
+		
+	# plt.show()
 
 # n, bins, patches = plt.hist(x=errVec, bins='auto', color='#0504aa', rwidth=0.85)
 # plt.grid(axis='y', alpha=0.75)
@@ -266,47 +307,41 @@ plt.show()
 # plt.show()
 
 
+if PLOT_OUTPUT:
+	pltCoord = np.array(SAMP_COORD)
+	triang = mtri.Triangulation(coordinateMatrix[:,0], coordinateMatrix[:,1], triangles=connectivityMatrix)
 
-pltCoord = np.array(SAMP_COORD)
-triang = mtri.Triangulation(coordinateMatrix[:,0], coordinateMatrix[:,1], triangles=connectivityMatrix)
+	fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16, 8), subplot_kw=dict(projection="3d"))
+	axes = ax.flatten()
 
-fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16, 8), subplot_kw=dict(projection="3d"))
-axes = ax.flatten()
+	# Plot true LAT signal
+	thisAx = axes[0]
+	thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
+	# thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey')
+	pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=SAMP_LAT, cmap='rainbow_r', vmin=MINLAT, vmax=MAXLAT, s = 20)
 
-# Plot true LAT signal
+	thisAx.set_title('LAT Signal (True)')
+	thisAx.set_xlabel('X', fontweight ='bold') 
+	thisAx.set_ylabel('Y', fontweight ='bold') 
+	thisAx.set_zlabel('Z', fontweight ='bold')
+	thisAx.view_init(elev, azim)
+	cax = fig.add_axes([thisAx.get_position().x0+0.015,thisAx.get_position().y0-0.05,thisAx.get_position().width,0.01])
+	plt.colorbar(pos, cax=cax, label='LAT (ms)', orientation="horizontal")
 
-minLat = math.floor(min(SAMP_LAT)/10)*10
-maxLat = math.ceil(max(SAMP_LAT)/10)*10
+	# Plot overall estimated LAT signal (aggregated from computation in each fold)
+	pltSig = yhat[SAMP_IDX]
+	pltCoord = np.array(SAMP_COORD)
 
-thisAx = axes[0]
-thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-# thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey')
-pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=SAMP_LAT, cmap='rainbow_r', vmin=minLat, vmax=maxLat, s = 20)
+	thisAx = axes[1]
+	thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
+	pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=pltSig, cmap='rainbow_r', vmin=MINLAT, vmax=MAXLAT, s = 20)
 
-thisAx.set_title('LAT Signal (True)')
-thisAx.set_xlabel('X', fontweight ='bold') 
-thisAx.set_ylabel('Y', fontweight ='bold') 
-thisAx.set_zlabel('Z', fontweight ='bold')
-cax = fig.add_axes([thisAx.get_position().x0+0.015,thisAx.get_position().y0-0.05,thisAx.get_position().width,0.01])
-plt.colorbar(pos, cax=cax, label='LAT (ms)', orientation="horizontal")
-
-# Plot overall estimated LAT signal (aggregated from computation in each fold)
-out = yhat[SAMP_IDX]
-# pltSig = [out[i] for i in range(len(out)) if out[i] < 50 and out[i] > -200]
-# pltCoord = [SAMP_COORD[i] for i in range(len(out)) if out[i] < 50 and out[i] > -200]
-pltSig = out
-pltCoord = SAMP_COORD
-pltCoord = np.array(pltCoord)
-
-thisAx = axes[1]
-thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=pltSig, cmap='rainbow_r', vmin=minLat, vmax=maxLat, s = 20)
-
-thisAx.set_title('LAT Signal (Graph Estimation)')
-thisAx.set_xlabel('X', fontweight ='bold') 
-thisAx.set_ylabel('Y', fontweight ='bold') 
-thisAx.set_zlabel('Z', fontweight ='bold')
-# cax = fig.add_axes([thisAx.get_position().x1+0.03,thisAx.get_position().y0,0.01,thisAx.get_position().height]) # vertical bar to the right
-cax = fig.add_axes([thisAx.get_position().x0+0.015,thisAx.get_position().y0-0.05,thisAx.get_position().width,0.01]) # horiz bar on the bottom
-plt.colorbar(pos, cax=cax, label='LAT (ms)', orientation="horizontal")
-plt.show()
+	thisAx.set_title('LAT Signal (Graph Estimation)')
+	thisAx.set_xlabel('X', fontweight ='bold') 
+	thisAx.set_ylabel('Y', fontweight ='bold') 
+	thisAx.set_zlabel('Z', fontweight ='bold')
+	thisAx.view_init(elev, azim)
+	# cax = fig.add_axes([thisAx.get_position().x1+0.03,thisAx.get_position().y0,0.01,thisAx.get_position().height]) # vertical bar to the right
+	cax = fig.add_axes([thisAx.get_position().x0+0.015,thisAx.get_position().y0-0.05,thisAx.get_position().width,0.01]) # horiz bar on the bottom
+	plt.colorbar(pos, cax=cax, label='LAT (ms)', orientation="horizontal")
+	plt.show()

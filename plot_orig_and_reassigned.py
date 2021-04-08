@@ -2,6 +2,8 @@
 from readMesh import readMesh
 from readLAT import readLAT
 
+import math
+
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from mpl_toolkits.mplot3d import Axes3D
@@ -40,6 +42,9 @@ coordKDtree = spatial.cKDTree(coordinateMatrix)
 
 latVer = coordinateMatrix[idxs]
 
+minLat = math.floor(min(latVals)/10)*10
+maxLat = math.ceil(max(latVals)/10)*10
+
 # print(len(latCoords), len(coordinateMatrix), len(connectivityMatrix))
 # print(max(latVals), min(latVals))
 
@@ -47,15 +52,21 @@ triang = mtri.Triangulation(coordinateMatrix[:,0], coordinateMatrix[:,1], triang
 
 thisAx = axes[0]
 thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-thisAx.scatter(latCoords[:,0], latCoords[:,1], latCoords[:,2], c=latVals, cmap='rainbow_r', s = 10)
-thisAx.set_title(nm+'\nOriginal LAT Coordinates')
+thisAx.scatter(latCoords[:,0], latCoords[:,1], latCoords[:,2], c=latVals, cmap='rainbow_r', vmin=minLat, vmax=maxLat, s = 10)
+thisAx.set_title('Original LAT Coordinates')
+thisAx.set_xlabel('X', fontweight ='bold') 
+thisAx.set_ylabel('Y', fontweight ='bold') 
+thisAx.set_zlabel('Z', fontweight ='bold')
 
 thisAx = axes[1]
 thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-pos = thisAx.scatter(latVer[:,0], latVer[:,1], latVer[:,2], c=latVals, cmap='rainbow_r', s = 10)
-thisAx.set_title(nm+'\nLAT Value Assigned to Nearest Mesh Vertex')
+pos = thisAx.scatter(latVer[:,0], latVer[:,1], latVer[:,2], c=latVals, cmap='rainbow_r', vmin=minLat, vmax=maxLat, s = 10)
+thisAx.set_title('LAT Value Assigned to Nearest Mesh Vertex')
+thisAx.set_xlabel('X', fontweight ='bold') 
+thisAx.set_ylabel('Y', fontweight ='bold') 
+thisAx.set_zlabel('Z', fontweight ='bold')
 
 cax = fig.add_axes([thisAx.get_position().x1+0.03,thisAx.get_position().y0,0.01,thisAx.get_position().height])
-plt.colorbar(pos, cax=cax) # Similar to fig.colorbar(im, cax = cax)
+plt.colorbar(pos, cax=cax, label='LAT (ms)') # Similar to fig.colorbar(im, cax = cax)
 
 plt.show()

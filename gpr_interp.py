@@ -64,7 +64,7 @@ SAMP_LAT = [LAT[i] for i in range(N) if IS_SAMP[i] is True]
 M = len(SAMP_IDX)
 
 
-gp_kernel = RBF()
+gp_kernel = RBF(length_scale=0.01) + RBF(length_scale=0.1) + RBF(length_scale=1)
 gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
 
 
@@ -154,17 +154,29 @@ else:
 	errVecWGPR = np.array(errVecGPR)
 	errVecGPR = np.array(Vec)
 
-avgMSE = 1/M*np.sum(errVecGPR ** 2)
-avgWMSE = 1/M*np.sum(errVecWGPR ** 2)
+sigPower = np.sum((np.array(SAMP_LAT) - np.mean(SAMP_LAT)) ** 2)
 
-print('\n\nMSE:\t' + str(avgMSE))
-print('WMSE:\t' + str(avgWMSE))
+mse = 1/M*np.sum(errVecGPR ** 2)
+rmse = np.sqrt(mse)
+nmse = np.sum(errVecGPR ** 2)/sigPower
+nrmse = rmse/np.mean(SAMP_LAT)
 
-snr = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/np.sum(errVecGPR ** 2))
-snrW = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/np.sum(errVecWGPR ** 2))
+snr = 20*np.log10(sigPower/np.sum(errVecGPR ** 2))
 
-print('\n\nSNR:\t' + str(snr))
-print('WSNR:\t' + str(snrW))
+print('\n\nMSE:\t{:.2f}'.format(mse))
+print('RMSE:\t{:.2f}'.format(rmse))
+print('NMSE:\t{:.2f}'.format(nmse))
+print('\nSNR:\t{:.2f}'.format(snr))
+
+
+wmse = 1/M*np.sum(errVecWGPR ** 2)
+
+wsnr = 20*np.log10(sigPower/np.sum(errVecWGPR ** 2))
+
+print('\n\nWMSE:\t{:.2f}'.format(wmse))
+print('WSNR:\t{:.2f}'.format(wsnr))
+
+# exit()
 
 # print('\n\nFraction of total with <15ms error:\t' + str(np.sum(abs(errVecNN) < 15)/M))
 # print('Fraction of total with <10ms error:\t' + str(np.sum(abs(errVecNN) < 10)/M))
@@ -172,22 +184,22 @@ print('WSNR:\t' + str(snrW))
 
 x = [i for i in range(M)]
 
-fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16,8))
-axes = ax.flatten()
+# fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16,8))
+# axes = ax.flatten()
 
-thisAx = axes[0]
-thisAx.scatter(x, errVecGPR)
-thisAx.set_title('|Error|')
-thisAx.set_xlabel('Vertex')
-thisAx.set_ylabel('Error (ms)')
+# thisAx = axes[0]
+# thisAx.scatter(x, errVecGPR)
+# thisAx.set_title('|Error|')
+# thisAx.set_xlabel('Vertex')
+# thisAx.set_ylabel('Error (ms)')
 
-thisAx = axes[1]
-thisAx.scatter(x, errVecWGPR)
-thisAx.set_title('|Error|*(frequency of error)')
-thisAx.set_xlabel('Vertex')
-thisAx.set_ylabel('Error Weighted by Occurrence Frequency\nbin width='+str(250/(len(bins)-1))+'ms')
+# thisAx = axes[1]
+# thisAx.scatter(x, errVecWGPR)
+# thisAx.set_title('|Error|*(frequency of error)')
+# thisAx.set_xlabel('Vertex')
+# thisAx.set_ylabel('Error Weighted by Occurrence Frequency\nbin width='+str(250/(len(bins)-1))+'ms')
 	
-plt.show()
+# plt.show()
 
 # n, bins, patches = plt.hist(x=errVecNN, bins='auto', color='#0504aa', rwidth=0.85)
 # plt.grid(axis='y', alpha=0.75)

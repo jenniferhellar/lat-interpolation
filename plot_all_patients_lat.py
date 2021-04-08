@@ -3,6 +3,8 @@ from readMesh import readMesh
 from readLAT import readLAT
 # from plotMesh import plotMesh
 
+import math
+
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from mpl_toolkits.mplot3d import Axes3D
@@ -59,16 +61,22 @@ for i in range(len(meshNames)):
 
 	latVer = coordinateMatrix[idxs]
 
+	minLat = math.floor(min(latVals)/10)*10
+	maxLat = math.ceil(max(latVals)/10)*10
+
 	# print(len(latCoords), len(coordinateMatrix), len(connectivityMatrix))
 	# print(max(latVals), min(latVals))
 
 	triang = mtri.Triangulation(coordinateMatrix[:,0], coordinateMatrix[:,1], triangles=connectivityMatrix)
 	thisAx = axes[i]
 	thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-	pos = thisAx.scatter(latCoords[:,0], latCoords[:,1], latCoords[:,2], c=latVals, cmap='rainbow_r', s = 10)
+	pos = thisAx.scatter(latCoords[:,0], latCoords[:,1], latCoords[:,2], c=latVals, cmap='rainbow_r', vmin=minLat, vmax=maxLat, s = 10)
 	# thisAx.scatter(latVer[:,0], latVer[:,1], latVer[:,2], c=latVals, cmap='rainbow', s = 10)
 	cax = fig.add_axes([thisAx.get_position().x1+0.03,thisAx.get_position().y0,0.01,thisAx.get_position().height])
-	plt.colorbar(pos, cax=cax) # Similar to fig.colorbar(im, cax = cax)
+	plt.colorbar(pos, cax=cax, label='LAT (ms)') # Similar to fig.colorbar(im, cax = cax)
 	thisAx.set_title(nm)
+	thisAx.set_xlabel('X', fontweight ='bold') 
+	thisAx.set_ylabel('Y', fontweight ='bold') 
+	thisAx.set_zlabel('Z', fontweight ='bold')
 
 plt.show()

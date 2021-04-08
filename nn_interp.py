@@ -150,17 +150,27 @@ else:
 	errVecWNN = np.array(errVecNN)
 	errVecNN = np.array(Vec)
 
-avgMSE = 1/M*np.sum(errVecNN ** 2)
-avgWMSE = 1/M*np.sum(errVecWNN ** 2)
+sigPower = np.sum((np.array(SAMP_LAT) - np.mean(SAMP_LAT)) ** 2)
 
-print('\n\nMSE:\t' + str(avgMSE))
-print('WMSE:\t' + str(avgWMSE))
+mse = 1/M*np.sum(errVecNN ** 2)
+rmse = np.sqrt(mse)
+nmse = np.sum(errVecNN ** 2)/sigPower
+nrmse = rmse/np.mean(SAMP_LAT)
 
-snr = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/np.sum(errVecNN ** 2))
-snrW = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/np.sum(errVecWNN ** 2))
+snr = 20*np.log10(sigPower/np.sum(errVecNN ** 2))
 
-print('\n\nSNR:\t' + str(snr))
-print('WSNR:\t' + str(snrW))
+print('\n\nMSE:\t{:.2f}'.format(mse))
+print('RMSE:\t{:.2f}'.format(rmse))
+print('NMSE:\t{:.2f}'.format(nmse))
+print('\nSNR:\t{:.2f}'.format(snr))
+
+
+wmse = 1/M*np.sum(errVecWNN ** 2)
+
+wsnr = 20*np.log10(sigPower/np.sum(errVecWNN ** 2))
+
+print('\n\nWMSE:\t{:.2f}'.format(wmse))
+print('WSNR:\t{:.2f}'.format(wsnr))
 
 # print('\n\nFraction of total with <15ms error:\t' + str(np.sum(abs(errVecNN) < 15)/M))
 # print('Fraction of total with <10ms error:\t' + str(np.sum(abs(errVecNN) < 10)/M))
