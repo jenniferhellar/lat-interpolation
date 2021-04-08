@@ -4,6 +4,7 @@ Requirements: numpy, scipy, matplotlib, scikit-learn
 """
 
 import numpy as np
+import math
 
 # plotting packages
 import matplotlib.pyplot as plt
@@ -75,7 +76,7 @@ edges: list of edges, edge = set(v_i, v_j)
 triangles: list of corr. triangles adj to each edge, tri = (v_i, v_j, v_k)
 """
 print('Generating edge matrix ...')
-[EDGES, TRI] = getE(connectivityMatrix)
+[EDGES, TRI] = getE(connectivityMatrix, LAT)
 
 
 """ 
@@ -100,7 +101,7 @@ L = D - A
 
 
 """ Hyperparameters """
-alpha = 0.1
+alpha = 0.001
 beta = 1
 
 
@@ -111,18 +112,19 @@ kf12 = KFold(n_splits=folds, shuffle=True)
 
 fold = 0
 
-y = np.zeros((N,1))
-M_l = np.zeros((N,N))
-M_u = np.zeros((N,N))
-
 yhat = np.zeros((N,1))
 
 for tr_i, tst_i in kf12.split(SAMP_IDX):
+
+	print('\nFold ' + str(fold))
+
+	y = np.zeros((N,1))
+	M_l = np.zeros((N,N))
+	M_u = np.zeros((N,N))
+
 	# number of labelled and unlabelled vertices in this fold
 	trLen = len(tr_i)
 	tstLen = len(tst_i)
-
-	print('\nFold ' + str(fold) + '\t# of labelled vertices: ' + str(trLen) + '\t# of unlabelled vertices: ' + str(tstLen))
 
 	# get vertex indices of labelled/unlabelled nodes
 	TrIdx = sorted(np.take(SAMP_IDX, tr_i))
@@ -142,7 +144,6 @@ for tr_i, tst_i in kf12.split(SAMP_IDX):
 			y[i] = LAT[i]
 			M_l[i,i] = float(1)
 		else:
-			y[i] = 0
 			M_u[i,i] = float(1)
 
 			
@@ -207,17 +208,28 @@ else:
 	errVecW = np.array(errVecW)
 	errVec = np.array(Vec)
 
-avgMSE = 1/M*np.sum(errVec ** 2)
-avgWMSE = 1/M*np.sum(errVecW ** 2)
+sigPower = np.sum((np.array(SAMP_LAT) - np.mean(SAMP_LAT)) ** 2)
 
-print('\n\nMSE:\t' + str(avgMSE))
-print('WMSE:\t' + str(avgWMSE))
+mse = 1/M*np.sum(errVec ** 2)
+rmse = np.sqrt(mse)
+nmse = np.sum(errVec ** 2)/sigPower
+nrmse = rmse/np.mean(SAMP_LAT)
 
-snr = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*avgMSE))
-snrW = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*avgWMSE))
+snr = 20*np.log10(sigPower/np.sum(errVec ** 2))
 
-print('\n\nSNR:\t' + str(snr))
-print('WSNR:\t' + str(snrW))
+print('\n\nMSE:\t{:.2f}'.format(mse))
+print('RMSE:\t{:.2f}'.format(rmse))
+print('NMSE:\t{:.2f}'.format(nmse))
+print('\nSNR:\t{:.2f}'.format(snr))
+
+
+wmse = 1/M*np.sum(errVecW ** 2)
+
+wsnr = 20*np.log10(sigPower/np.sum(errVecW ** 2))
+
+print('\n\nWMSE:\t{:.2f}'.format(wmse))
+print('WSNR:\t{:.2f}'.format(wsnr))
+
 
 # print('\n\nFraction of total with <15ms estimation error:\t' + str(np.sum(abs(errVec) < 15)/M))
 # print('Fraction of total with <10ms estimation error:\t' + str(np.sum(abs(errVec) < 10)/M))
@@ -262,10 +274,14 @@ fig, ax = plt.subplots(nrows = 1, ncols = 2, figsize=(16, 8), subplot_kw=dict(pr
 axes = ax.flatten()
 
 # Plot true LAT signal
+
+minLat = math.floor(min(SAMP_LAT)/10)*10
+maxLat = math.ceil(max(SAMP_LAT)/10)*10
+
 thisAx = axes[0]
-# thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey')
-pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=SAMP_LAT, cmap='rainbow_r', vmin=-200, vmax=50, s = 20)
+thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
+# thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey')
+pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=SAMP_LAT, cmap='rainbow_r', vmin=minLat, vmax=maxLat, s = 20)
 
 thisAx.set_title('LAT Signal (True)')
 thisAx.set_xlabel('X', fontweight ='bold') 
@@ -284,7 +300,7 @@ pltCoord = np.array(pltCoord)
 
 thisAx = axes[1]
 thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=pltSig, cmap='rainbow_r', vmin=-200, vmax=50, s = 20)
+pos = thisAx.scatter(pltCoord[:,0], pltCoord[:,1], pltCoord[:,2], c=pltSig, cmap='rainbow_r', vmin=minLat, vmax=maxLat, s = 20)
 
 thisAx.set_title('LAT Signal (Graph Estimation)')
 thisAx.set_xlabel('X', fontweight ='bold') 
