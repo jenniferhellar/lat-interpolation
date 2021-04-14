@@ -244,6 +244,41 @@ def getAdjMatrixCotan(coordinateMatrix, edges, triangles):
 	return A
 
 
+def getAdjMatrixExp(coordinateMatrix, edges, triangles):
+	N = len(coordinateMatrix)
+	A = np.zeros((N, N))
+
+	d = 0
+	cnt = 0
+	for i in range(len(coordinateMatrix)):
+		[x1, y1, z1] = coordinateMatrix[i, :]
+		for j in range(len(coordinateMatrix)):
+			[x2, y2, z2] = coordinateMatrix[j, :]
+			d += math.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
+			cnt += 1
+	d = d/cnt
+
+	for i in range(len(edges)):
+
+		e = edges[i]
+		
+		e = list(e)	
+		v_i = e[0]
+		v_j = e[1]
+
+		[x1, y1, z1] = coordinateMatrix[v_i, :]
+		[x2, y2, z2] = coordinateMatrix[v_j, :]
+
+		# w_ij = 1/math.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
+		d2_ij = (x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2
+		w_ij = math.exp(-d2_ij/d**2)
+
+		A[v_i, v_j] = w_ij
+		A[v_j, v_i] = w_ij
+
+	return A
+
+
 def pltAdjMatrix(A, first, numV, title):
 
 	end = first + numV + 1;

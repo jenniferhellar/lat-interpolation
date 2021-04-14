@@ -5,6 +5,7 @@ Requirements: numpy, scipy, matplotlib, scikit-learn
 import os
 
 import numpy as np
+import math
 
 # plotting packages
 import matplotlib.pyplot as plt
@@ -28,14 +29,10 @@ from utils import *
 
 
 dataDir = 'data/'
-meshNames = ['mesh.mesh']
-latNames = ['lat.txt']
-
-i = 0
 
 """ Read the files """
-meshFile = meshNames[i]
-latFile = latNames[i]
+meshFile = 'mesh.mesh'
+latFile = 'lat.txt'
 nm = meshFile[0:-5]
 
 print('Reading files for ' + nm + ' ...')
@@ -44,6 +41,10 @@ print('Reading files for ' + nm + ' ...')
 
 N = len(coordinateMatrix)	# number of vertices in the graph
 M = len(latCoords)			# number of signal samples
+
+if N > 11000:
+	print('Graph too large!')
+	exit(0)
 
 IDX = [i for i in range(N)]
 COORD = [coordinateMatrix[i] for i in IDX]
@@ -65,6 +66,19 @@ SAMP_LAT = [LAT[i] for i in range(N) if IS_SAMP[i] is True]
 
 M = len(SAMP_IDX)
 
+# Assign unknown coordinates an initial value of the nearest known point
+UNKNOWN = [COORD[i] for i in range(N) if IS_SAMP[i] is False]
+UNKNOWN = griddata(np.array(SAMP_COORD), np.array(SAMP_LAT), np.array(UNKNOWN), method='nearest')
+currIdx = 0
+for i in range(N):
+	if IS_SAMP[i] is False:
+		LAT[i] = UNKNOWN[currIdx]
+		currIdx += 1
+
+# For colorbar ranges
+MINLAT = math.floor(min(SAMP_LAT)/10)*10
+MAXLAT = math.ceil(max(SAMP_LAT)/10)*10
+
 """
 Get edges and corresponding adjacent triangles.
 
@@ -72,7 +86,7 @@ edges: list of edges, edge = set(v_i, v_j)
 triangles: list of corr. triangles adj to each edge, tri = (v_i, v_j, v_k)
 """
 print('Generating edge matrix ...')
-[EDGES, TRI] = getE(connectivityMatrix)
+[EDGES, TRI, excl_midpt] = getE(coordinateMatrix, connectivityMatrix, LAT, 50)
 
 
 """ 
@@ -87,20 +101,24 @@ L: NxN Laplace matrix
 print('Calculating adjacency matrices ...')
 A = getUnWeightedAdj(coordinateMatrix, EDGES, TRI)
 # W = getAdjMatrix(coordinateMatrix, EDGES, TRI)
+# W = getAdjMatrixCotan(coordinateMatrix, EDGES, TRI)
+W = getAdjMatrixExp(coordinateMatrix, EDGES, TRI)
 
 D = np.diag(A.sum(axis=1))
 I = np.identity(N)
 
 print('Calculating Laplacian matrix ...')
-L = D - A
+# L = D - A
+L = D - W
+
 
 
 """ Hyperparameters """
-alphas = [0.1, 1.0, 5.0]
-betas = [0.1, 1.0, 5.0]
+# alphas = [0.01, 0.1, 1.0, 5.0]
+# betas = [0.01, 0.1, 1.0, 5.0]
 
-# alphas = [0.1, 1.0]
-# betas = [0.1]
+alphas = [0.01, 0.1]
+betas = [0.01]
 
 print()
 
@@ -123,9 +141,10 @@ folds = 10
 kf12 = KFold(n_splits=folds, shuffle=True)
 
 mse = np.zeros((len(alphas), len(betas)))
+nmse = np.zeros((len(alphas), len(betas)))
+rmse = np.zeros((len(alphas), len(betas)))
 wmse = np.zeros((len(alphas), len(betas)))
 snr = np.zeros((len(alphas), len(betas)))
-wsnr = np.zeros((len(alphas), len(betas)))
 
 for a_idx in range(len(alphas)):
 	alpha = alphas[a_idx]
@@ -197,13 +216,16 @@ for a_idx in range(len(alphas)):
 		errVecW = np.array(errVecW)
 		errVec = np.array(Vec)
 
+		sigPower = np.sum((np.array(SAMP_LAT) - np.mean(SAMP_LAT)) ** 2)
+
 		mse[a_idx][b_idx] = 1/M*np.sum(errVec ** 2)
+		nmse[a_idx][b_idx] = np.sum(errVec ** 2)/sigPower
+		rmse[a_idx][b_idx] = np.sqrt(mse[a_idx][b_idx])
 		wmse[a_idx][b_idx] = 1/M*np.sum(errVecW ** 2)
 
-		snr[a_idx][b_idx] = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*mse[a_idx][b_idx]))
-		wsnr[a_idx][b_idx] = 20*np.log10(np.sum(np.array(SAMP_LAT) ** 2)/(M*wmse[a_idx][b_idx]))
+		snr[a_idx][b_idx] = 20*np.log10(sigPower/(M*mse[a_idx][b_idx]))
 
-		print('%.2f %.2f %.2f %.2f', mse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx], wsnr[a_idx][b_idx])
+		print('{:.2f} {:.2f} {:.2f} {:.2f} {:.2f}'.format(mse[a_idx][b_idx], nmse[a_idx][b_idx], rmse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx])
 
 print()
 
@@ -222,9 +244,14 @@ fid = open(os.path.join('res','snr.txt'), 'w')
 snr.tofile(fid, sep='\n', format='%.2f')
 fid.close()
 
-print('Writing wsnr to file...')
-fid = open(os.path.join('res', 'wsnr.txt'), 'w')
-wsnr.tofile(fid, sep='\n', format='%.2f')
+print('Writing nmse to file...')
+fid = open(os.path.join('res', 'nmse.txt'), 'w')
+nmse.tofile(fid, sep='\n', format='%.2f')
+fid.close()
+
+print('Writing rmse to file...')
+fid = open(os.path.join('res', 'rmse.txt'), 'w')
+rmse.tofile(fid, sep='\n', format='%.2f')
 fid.close()
 
 print('\nTest complete.\n')

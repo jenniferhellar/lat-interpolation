@@ -144,8 +144,9 @@ L: NxN Laplace matrix
 """
 print('Calculating adjacency matrices ...')
 A = getUnWeightedAdj(coordinateMatrix, EDGES, TRI)
-W = getAdjMatrix(coordinateMatrix, EDGES, TRI)
-W1 = getAdjMatrixCotan(coordinateMatrix, EDGES, TRI)
+# W = getAdjMatrix(coordinateMatrix, EDGES, TRI)
+# W = getAdjMatrixCotan(coordinateMatrix, EDGES, TRI)
+W = getAdjMatrixExp(coordinateMatrix, EDGES, TRI)
 
 # pltAdjMatrix(W, 0, 20, 'W(i,j) = 1/d(i,j)')
 # pltAdjMatrix(W1, 0, 20, 'Cotangent Weights')
@@ -154,9 +155,8 @@ D = np.diag(A.sum(axis=1))
 I = np.identity(N)
 
 print('Calculating Laplacian matrix ...')
-L = D - A
-# L = D - W
-# L = D - W1
+# L = D - A
+L = D - W
 
 
 """ Hyperparameters """
