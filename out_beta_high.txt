@@ -1,0 +1,145 @@
+Reading files for mesh ...
+Generating edge matrix ...
+Calculating adjacency matrices ...
+Calculating Laplacian matrix ...
+
+Writing alphas to file...
+Writing betas to file...
+
+Cross-validating alpha=0.01, beta=100.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+529.28 0.08 23.01 12.10 21.45
+
+Cross-validating alpha=0.01, beta=1000.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+560.96 0.09 23.68 14.69 20.94
+
+Cross-validating alpha=0.1, beta=100.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+1964.57 0.31 44.32 8.63 10.06
+
+Cross-validating alpha=0.1, beta=1000.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+2010.02 0.32 44.83 8.50 9.86
+
+Cross-validating alpha=1.0, beta=100.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+5973.36 0.96 77.29 15.95 0.40
+
+Cross-validating alpha=1.0, beta=1000.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+6089.21 0.97 78.03 15.12 0.23
+
+Cross-validating alpha=5.0, beta=100.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7091.90 1.13 84.21 17.47 -1.09
+
+Cross-validating alpha=5.0, beta=1000.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7154.14 1.14 84.58 16.02 -1.17
+
+Cross-validating alpha=10.0, beta=100.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7272.93 1.16 85.28 17.32 -1.31
+
+Cross-validating alpha=10.0, beta=1000.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7309.68 1.17 85.50 17.23 -1.36
+
+Writing mse to file...
+Writing wmse to file...
+Writing snr to file...
+Writing nmse to file...
+Writing rmse to file...
+
+Test complete.

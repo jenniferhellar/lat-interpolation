@@ -1,0 +1,197 @@
+Reading files for mesh ...
+Generating edge matrix ...
+Calculating adjacency matrices ...
+Calculating Laplacian matrix ...
+
+Writing alphas to file...
+Writing betas to file...
+
+Cross-validating alpha=100.0, beta=0.01
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7488.73 1.20 86.54 17.41 -1.57
+
+Cross-validating alpha=100.0, beta=0.1
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7480.07 1.20 86.49 17.43 -1.56
+
+Cross-validating alpha=100.0, beta=1.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7462.69 1.19 86.39 17.28 -1.54
+
+Cross-validating alpha=100.0, beta=5.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7455.24 1.19 86.34 17.32 -1.53
+
+Cross-validating alpha=100.0, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7456.30 1.19 86.35 17.26 -1.53
+
+Cross-validating alpha=100.0, beta=100.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7461.03 1.19 86.38 17.36 -1.53
+
+Cross-validating alpha=100.0, beta=1000.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7467.71 1.19 86.42 17.39 -1.54
+
+Cross-validating alpha=1000.0, beta=0.01
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7490.04 1.20 86.55 17.45 -1.57
+
+Cross-validating alpha=1000.0, beta=0.1
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7489.16 1.20 86.54 17.45 -1.57
+
+Cross-validating alpha=1000.0, beta=1.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7487.28 1.20 86.53 17.41 -1.56
+
+Cross-validating alpha=1000.0, beta=5.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7486.45 1.20 86.52 17.44 -1.56
+
+Cross-validating alpha=1000.0, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7486.44 1.20 86.52 17.45 -1.56
+
+Cross-validating alpha=1000.0, beta=100.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7486.60 1.20 86.53 17.42 -1.56
+
+Cross-validating alpha=1000.0, beta=1000.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7487.32 1.20 86.53 17.42 -1.56
+
+Writing mse to file...
+Writing wmse to file...
+Writing snr to file...
+Writing nmse to file...
+Writing rmse to file...
+
+Test complete.

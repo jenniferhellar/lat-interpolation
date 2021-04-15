@@ -102,23 +102,28 @@ print('Calculating adjacency matrices ...')
 A = getUnWeightedAdj(coordinateMatrix, EDGES, TRI)
 # W = getAdjMatrix(coordinateMatrix, EDGES, TRI)
 # W = getAdjMatrixCotan(coordinateMatrix, EDGES, TRI)
-W = getAdjMatrixExp(coordinateMatrix, EDGES, TRI)
+# W = getAdjMatrixExp(coordinateMatrix, EDGES, TRI)
 
 D = np.diag(A.sum(axis=1))
 I = np.identity(N)
 
 print('Calculating Laplacian matrix ...')
-# L = D - A
-L = D - W
+L = D - A
+# L = D - W
 
 
 
 """ Hyperparameters """
-# alphas = [0.01, 0.1, 1.0, 5.0]
-# betas = [0.01, 0.1, 1.0, 5.0]
+alphas = [0.00001, 0.0001, 0.0005, 0.001, 0.005]
+betas = [0.75, 1.0, 1.25, 1.75, 2.0, 4.0, 5.0]
 
-alphas = [0.01, 0.1]
-betas = [0.01]
+# alphas = [100.0, 1000.0]
+
+# alphas = [0.01, 0.1, 1.0, 5.0, 10.0]
+# betas = [100.0, 1000.0]
+
+# alphas = [0.01, 0.1]
+# betas = [0.01]
 
 print()
 
@@ -225,7 +230,7 @@ for a_idx in range(len(alphas)):
 
 		snr[a_idx][b_idx] = 20*np.log10(sigPower/(M*mse[a_idx][b_idx]))
 
-		print('{:.2f} {:.2f} {:.2f} {:.2f} {:.2f}'.format(mse[a_idx][b_idx], nmse[a_idx][b_idx], rmse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx])
+		print('{:.2f} {:.2f} {:.2f} {:.2f} {:.2f}'.format(mse[a_idx][b_idx], nmse[a_idx][b_idx], rmse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx]))
 
 print()
 
