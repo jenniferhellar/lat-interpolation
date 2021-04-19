@@ -114,16 +114,8 @@ L = D - A
 
 
 """ Hyperparameters """
-alphas = [0.00001, 0.0001, 0.0005, 0.001, 0.005]
-betas = [0.75, 1.0, 1.25, 1.75, 2.0, 4.0, 5.0]
-
-# alphas = [100.0, 1000.0]
-
-# alphas = [0.01, 0.1, 1.0, 5.0, 10.0]
-# betas = [100.0, 1000.0]
-
-# alphas = [0.01, 0.1]
-# betas = [0.01]
+alphas = [0.00001, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]
+betas = [0.0, 1.0, 2.0, 4.0, 5.0, 8.0, 10.0]
 
 print()
 
@@ -132,12 +124,12 @@ if not os.path.isdir('res'):
 
 print('Writing alphas to file...')
 fid = open(os.path.join('res','alphas.txt'), 'w')
-np.array(alphas).tofile(fid, sep='\n', format='%.2f')
+np.array(alphas).tofile(fid, sep='\n', format='%.5f')
 fid.close()
 
 print('Writing betas to file...')
 fid = open(os.path.join('res','betas.txt'), 'w')
-np.array(betas).tofile(fid, sep='\n', format='%.2f')
+np.array(betas).tofile(fid, sep='\n', format='%.5f')
 fid.close()
 
 """ Cross-validation """
@@ -230,33 +222,33 @@ for a_idx in range(len(alphas)):
 
 		snr[a_idx][b_idx] = 20*np.log10(sigPower/(M*mse[a_idx][b_idx]))
 
-		print('{:.2f} {:.2f} {:.2f} {:.2f} {:.2f}'.format(mse[a_idx][b_idx], nmse[a_idx][b_idx], rmse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx]))
+		print('{:.5f} {:.5f} {:.5f} {:.5f} {:.5f}'.format(mse[a_idx][b_idx], nmse[a_idx][b_idx], rmse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx]))
 
 print()
 
 print('Writing mse to file...')
 fid = open(os.path.join('res', 'mse.txt'), 'w')
-mse.tofile(fid, sep='\n', format='%.2f')
+mse.tofile(fid, sep='\n', format='%.5f')
 fid.close()
 
 print('Writing wmse to file...')
 fid = open(os.path.join('res','wmse.txt'), 'w')
-wmse.tofile(fid, sep='\n', format='%.2f')
+wmse.tofile(fid, sep='\n', format='%.5f')
 fid.close()
 
 print('Writing snr to file...')
 fid = open(os.path.join('res','snr.txt'), 'w')
-snr.tofile(fid, sep='\n', format='%.2f')
+snr.tofile(fid, sep='\n', format='%.5f')
 fid.close()
 
 print('Writing nmse to file...')
 fid = open(os.path.join('res', 'nmse.txt'), 'w')
-nmse.tofile(fid, sep='\n', format='%.2f')
+nmse.tofile(fid, sep='\n', format='%.5f')
 fid.close()
 
 print('Writing rmse to file...')
 fid = open(os.path.join('res', 'rmse.txt'), 'w')
-rmse.tofile(fid, sep='\n', format='%.2f')
+rmse.tofile(fid, sep='\n', format='%.5f')
 fid.close()
 
 print('\nTest complete.\n')

@@ -6,7 +6,7 @@ Calculating Laplacian matrix ...
 Writing alphas to file...
 Writing betas to file...
 
-Cross-validating alpha=1e-05, beta=0.75
+Cross-validating alpha=1e-05, beta=0.0
         Fold 0
         Fold 1
         Fold 2
@@ -17,7 +17,7 @@ Cross-validating alpha=1e-05, beta=0.75
         Fold 7
         Fold 8
         Fold 9
-353.79 0.06 18.81 9.50 24.95
+7490.19146 1.19783 86.54589 17.46853 -1.56791
 
 Cross-validating alpha=1e-05, beta=1.0
         Fold 0
@@ -30,33 +30,7 @@ Cross-validating alpha=1e-05, beta=1.0
         Fold 7
         Fold 8
         Fold 9
-399.07 0.06 19.98 9.72 23.90
-
-Cross-validating alpha=1e-05, beta=1.25
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-402.75 0.06 20.07 9.93 23.82
-
-Cross-validating alpha=1e-05, beta=1.75
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-362.95 0.06 19.05 10.81 24.72
+356.80460 0.05706 18.88927 9.74836 24.87334
 
 Cross-validating alpha=1e-05, beta=2.0
         Fold 0
@@ -69,7 +43,7 @@ Cross-validating alpha=1e-05, beta=2.0
         Fold 7
         Fold 8
         Fold 9
-365.26 0.06 19.11 10.91 24.67
+367.97635 0.05885 19.18271 10.60092 24.60555
 
 Cross-validating alpha=1e-05, beta=4.0
         Fold 0
@@ -82,7 +56,7 @@ Cross-validating alpha=1e-05, beta=4.0
         Fold 7
         Fold 8
         Fold 9
-381.99 0.06 19.54 11.35 24.28
+379.87940 0.06075 19.49050 11.72480 24.32904
 
 Cross-validating alpha=1e-05, beta=5.0
         Fold 0
@@ -95,9 +69,9 @@ Cross-validating alpha=1e-05, beta=5.0
         Fold 7
         Fold 8
         Fold 9
-386.41 0.06 19.66 11.54 24.18
+387.73666 0.06201 19.69103 11.50279 24.15121
 
-Cross-validating alpha=0.0001, beta=0.75
+Cross-validating alpha=1e-05, beta=8.0
         Fold 0
         Fold 1
         Fold 2
@@ -108,7 +82,33 @@ Cross-validating alpha=0.0001, beta=0.75
         Fold 7
         Fold 8
         Fold 9
-356.54 0.06 18.88 9.45 24.88
+402.65561 0.06439 20.06628 11.94086 23.82328
+
+Cross-validating alpha=1e-05, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+405.93569 0.06492 20.14785 11.91537 23.75281
+
+Cross-validating alpha=0.0001, beta=0.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7490.19146 1.19783 86.54589 17.46853 -1.56791
 
 Cross-validating alpha=0.0001, beta=1.0
         Fold 0
@@ -121,33 +121,7 @@ Cross-validating alpha=0.0001, beta=1.0
         Fold 7
         Fold 8
         Fold 9
-355.90 0.06 18.87 9.84 24.90
-
-Cross-validating alpha=0.0001, beta=1.25
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-364.94 0.06 19.10 10.03 24.68
-
-Cross-validating alpha=0.0001, beta=1.75
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-362.75 0.06 19.05 10.08 24.73
+359.54097 0.05750 18.96157 9.71554 24.80698
 
 Cross-validating alpha=0.0001, beta=2.0
         Fold 0
@@ -160,7 +134,7 @@ Cross-validating alpha=0.0001, beta=2.0
         Fold 7
         Fold 8
         Fold 9
-365.66 0.06 19.12 10.90 24.66
+366.54611 0.05862 19.14539 10.72476 24.63938
 
 Cross-validating alpha=0.0001, beta=4.0
         Fold 0
@@ -173,7 +147,7 @@ Cross-validating alpha=0.0001, beta=4.0
         Fold 7
         Fold 8
         Fold 9
-381.97 0.06 19.54 11.09 24.28
+381.80291 0.06106 19.53978 11.38549 24.28517
 
 Cross-validating alpha=0.0001, beta=5.0
         Fold 0
@@ -186,9 +160,9 @@ Cross-validating alpha=0.0001, beta=5.0
         Fold 7
         Fold 8
         Fold 9
-392.33 0.06 19.81 11.44 24.05
+379.33075 0.06066 19.47642 11.33051 24.34159
 
-Cross-validating alpha=0.0005, beta=0.75
+Cross-validating alpha=0.0001, beta=8.0
         Fold 0
         Fold 1
         Fold 2
@@ -199,7 +173,33 @@ Cross-validating alpha=0.0005, beta=0.75
         Fold 7
         Fold 8
         Fold 9
-358.54 0.06 18.94 8.93 24.83
+393.78887 0.06297 19.84411 12.19597 24.01668
+
+Cross-validating alpha=0.0001, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+451.95553 0.07228 21.25925 12.10186 22.82004
+
+Cross-validating alpha=0.0005, beta=0.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7490.19146 1.19783 86.54589 17.46853 -1.56791
 
 Cross-validating alpha=0.0005, beta=1.0
         Fold 0
@@ -212,33 +212,7 @@ Cross-validating alpha=0.0005, beta=1.0
         Fold 7
         Fold 8
         Fold 9
-360.01 0.06 18.97 9.58 24.80
-
-Cross-validating alpha=0.0005, beta=1.25
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-360.27 0.06 18.98 9.78 24.79
-
-Cross-validating alpha=0.0005, beta=1.75
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-365.23 0.06 19.11 10.24 24.67
+400.01515 0.06397 20.00038 10.42983 23.88042
 
 Cross-validating alpha=0.0005, beta=2.0
         Fold 0
@@ -251,7 +225,7 @@ Cross-validating alpha=0.0005, beta=2.0
         Fold 7
         Fold 8
         Fold 9
-360.56 0.06 18.99 10.23 24.78
+363.20984 0.05808 19.05806 10.71286 24.71880
 
 Cross-validating alpha=0.0005, beta=4.0
         Fold 0
@@ -264,7 +238,7 @@ Cross-validating alpha=0.0005, beta=4.0
         Fold 7
         Fold 8
         Fold 9
-377.84 0.06 19.44 11.72 24.38
+430.25895 0.06881 20.74268 11.66518 23.24735
 
 Cross-validating alpha=0.0005, beta=5.0
         Fold 0
@@ -277,9 +251,9 @@ Cross-validating alpha=0.0005, beta=5.0
         Fold 7
         Fold 8
         Fold 9
-383.19 0.06 19.58 11.58 24.25
+385.59003 0.06166 19.63645 11.48502 24.19944
 
-Cross-validating alpha=0.001, beta=0.75
+Cross-validating alpha=0.0005, beta=8.0
         Fold 0
         Fold 1
         Fold 2
@@ -290,7 +264,33 @@ Cross-validating alpha=0.001, beta=0.75
         Fold 7
         Fold 8
         Fold 9
-358.94 0.06 18.95 9.89 24.82
+398.29108 0.06369 19.95723 12.14068 23.91794
+
+Cross-validating alpha=0.0005, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+404.71747 0.06472 20.11759 12.38350 23.77891
+
+Cross-validating alpha=0.001, beta=0.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7490.19146 1.19783 86.54589 17.46853 -1.56791
 
 Cross-validating alpha=0.001, beta=1.0
         Fold 0
@@ -303,33 +303,7 @@ Cross-validating alpha=0.001, beta=1.0
         Fold 7
         Fold 8
         Fold 9
-358.86 0.06 18.94 10.36 24.82
-
-Cross-validating alpha=0.001, beta=1.25
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-358.90 0.06 18.94 10.51 24.82
-
-Cross-validating alpha=0.001, beta=1.75
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-409.80 0.07 20.24 10.39 23.67
+352.56293 0.05638 18.77666 10.57925 24.97722
 
 Cross-validating alpha=0.001, beta=2.0
         Fold 0
@@ -342,7 +316,7 @@ Cross-validating alpha=0.001, beta=2.0
         Fold 7
         Fold 8
         Fold 9
-364.68 0.06 19.10 10.75 24.68
+367.56799 0.05878 19.17206 10.83756 24.61520
 
 Cross-validating alpha=0.001, beta=4.0
         Fold 0
@@ -355,7 +329,7 @@ Cross-validating alpha=0.001, beta=4.0
         Fold 7
         Fold 8
         Fold 9
-427.04 0.07 20.66 11.08 23.31
+385.93187 0.06172 19.64515 10.82298 24.19174
 
 Cross-validating alpha=0.001, beta=5.0
         Fold 0
@@ -368,9 +342,9 @@ Cross-validating alpha=0.001, beta=5.0
         Fold 7
         Fold 8
         Fold 9
-381.88 0.06 19.54 11.40 24.28
+384.59930 0.06151 19.61120 11.21700 24.22178
 
-Cross-validating alpha=0.005, beta=0.75
+Cross-validating alpha=0.001, beta=8.0
         Fold 0
         Fold 1
         Fold 2
@@ -381,7 +355,33 @@ Cross-validating alpha=0.005, beta=0.75
         Fold 7
         Fold 8
         Fold 9
-392.19 0.06 19.80 7.89 24.05
+397.99067 0.06365 19.94970 12.17370 23.92449
+
+Cross-validating alpha=0.001, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+409.73913 0.06553 20.24201 12.11037 23.67180
+
+Cross-validating alpha=0.005, beta=0.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7490.19146 1.19783 86.54589 17.46853 -1.56791
 
 Cross-validating alpha=0.005, beta=1.0
         Fold 0
@@ -394,33 +394,7 @@ Cross-validating alpha=0.005, beta=1.0
         Fold 7
         Fold 8
         Fold 9
-381.97 0.06 19.54 8.45 24.28
-
-Cross-validating alpha=0.005, beta=1.25
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-381.58 0.06 19.53 8.62 24.29
-
-Cross-validating alpha=0.005, beta=1.75
-        Fold 0
-        Fold 1
-        Fold 2
-        Fold 3
-        Fold 4
-        Fold 5
-        Fold 6
-        Fold 7
-        Fold 8
-        Fold 9
-385.71 0.06 19.64 9.26 24.20
+384.06851 0.06142 19.59767 8.30414 24.23378
 
 Cross-validating alpha=0.005, beta=2.0
         Fold 0
@@ -433,7 +407,7 @@ Cross-validating alpha=0.005, beta=2.0
         Fold 7
         Fold 8
         Fold 9
-381.55 0.06 19.53 9.28 24.29
+381.58435 0.06102 19.53418 8.99253 24.29014
 
 Cross-validating alpha=0.005, beta=4.0
         Fold 0
@@ -446,7 +420,7 @@ Cross-validating alpha=0.005, beta=4.0
         Fold 7
         Fold 8
         Fold 9
-438.55 0.07 20.94 10.68 23.08
+394.28794 0.06305 19.85668 10.90948 24.00568
 
 Cross-validating alpha=0.005, beta=5.0
         Fold 0
@@ -459,7 +433,215 @@ Cross-validating alpha=0.005, beta=5.0
         Fold 7
         Fold 8
         Fold 9
-399.38 0.06 19.98 10.78 23.89
+398.41502 0.06371 19.96034 10.63014 23.91524
+
+Cross-validating alpha=0.005, beta=8.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+409.26430 0.06545 20.23028 11.80996 23.68187
+
+Cross-validating alpha=0.005, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+416.95792 0.06668 20.41955 11.32230 23.52011
+
+Cross-validating alpha=0.01, beta=0.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7490.19146 1.19783 86.54589 17.46853 -1.56791
+
+Cross-validating alpha=0.01, beta=1.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+451.62800 0.07222 21.25154 6.95923 22.82633
+
+Cross-validating alpha=0.01, beta=2.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+433.88939 0.06939 20.83001 7.67695 23.17437
+
+Cross-validating alpha=0.01, beta=4.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+431.85760 0.06906 20.78118 9.24537 23.21514
+
+Cross-validating alpha=0.01, beta=5.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+477.29741 0.07633 21.84714 8.93508 22.34617
+
+Cross-validating alpha=0.01, beta=8.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+444.61201 0.07110 21.08582 10.19011 22.96233
+
+Cross-validating alpha=0.01, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+447.61452 0.07158 21.15690 10.42623 22.90387
+
+Cross-validating alpha=0.05, beta=0.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+7490.19146 1.19783 86.54589 17.46853 -1.56791
+
+Cross-validating alpha=0.05, beta=1.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+1261.07659 0.20167 35.51164 6.76831 13.90712
+
+Cross-validating alpha=0.05, beta=2.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+1142.95320 0.18278 33.80759 8.25363 14.76138
+
+Cross-validating alpha=0.05, beta=4.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+1068.54255 0.17088 32.68857 8.43132 15.34612
+
+Cross-validating alpha=0.05, beta=5.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+1084.86604 0.17349 32.93730 9.09833 15.21443
+
+Cross-validating alpha=0.05, beta=8.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+1040.71675 0.16643 32.26014 8.98634 15.57530
+
+Cross-validating alpha=0.05, beta=10.0
+        Fold 0
+        Fold 1
+        Fold 2
+        Fold 3
+        Fold 4
+        Fold 5
+        Fold 6
+        Fold 7
+        Fold 8
+        Fold 9
+1049.91100 0.16790 32.40233 8.94035 15.49890
 
 Writing mse to file...
 Writing wmse to file...
