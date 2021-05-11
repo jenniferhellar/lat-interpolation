@@ -9,13 +9,13 @@ Email: jennifer.hellar@rice.edu
 ### Environment
 Python 3.9.0  
 Packages: os, numpy, matplotlib, sklearn, scipy, math
---------------------------------------------------------------------------------
+
 ### Overview
 Interpolation methods:
 * _gpr_interp.py_
     - Gaussian Process Regression interpolation on LAT data.
 * **_graph_interp.py_**
-    - **MAGIC-LAT.**
+    - MAGIC-LAT.
 * _nn_interp.py_
     - Nearest Neighbors interpolation on LAT data.
 
