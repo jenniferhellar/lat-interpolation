@@ -1,0 +1,21 @@
+Reading files for Patient037_I_MESHData9-RV SINUS VOLTAGE ...
+Generating edge matrix ...
+Calculating adjacency matrices ...
+Calculating Laplacian matrix ...
+Fold 0, NMSE:	[0.32233081]
+Fold 1, NMSE:	[0.00320654]
+Fold 2, NMSE:	[0.0239415]
+Fold 3, NMSE:	[0.01386266]
+Fold 4, NMSE:	[0.00389842]
+Fold 5, NMSE:	[0.00595528]
+Fold 6, NMSE:	[0.0226601]
+Fold 7, NMSE:	[0.00574964]
+Fold 8, NMSE:	[0.31321341]
+Fold 9, NMSE:	[0.04716464]
+
+
+MSE:	88.41
+RMSE:	9.40
+NMSE:	0.06
+
+SNR:	23.83
