@@ -3,7 +3,7 @@
 Test MAGIC-LAT over different regularization parameters.
 --------------------------------------------------------------------------------
 
-Description: Computes MAGIC-LAT error metrics for test sets of 87 vertices with
+Description: Computes MAGIC-LAT error metrics for test sets of 100 vertices with
 either coarse or fine regularization parameters.  Results written out to text
 files.
 
@@ -15,144 +15,138 @@ Requirements: os, numpy, sklearn, scipy, math
 
 File: test_reg_params.py
 
+Date: 05/24/2021
+
 Author: Jennifer Hellar
 Email: jennifer.hellar@rice.edu
 --------------------------------------------------------------------------------
 """
 
+import time
+
 import os
 
 import numpy as np
 import math
-
-# KD-Tree for mapping to nearest point
-from scipy.spatial import cKDTree
-
-# cross-validation package
-from sklearn.model_selection import KFold
-
-# nearest-neighbor interpolation
-from scipy.interpolate import griddata
+import random
 
 # functions to read the files
 from readMesh import readMesh
 from readLAT import readLAT
 
-# functions for computing graph edges and adj matrix
+
 from utils import *
+from const import *
+from magicLAT import *
 
+"""
+p033 = 9
+p034 = 14
+p035 = 18
+p037 = 20
+"""
+PATIENT_MAP				=		9
 
-COARSE 		=		1
-SPARSIFY_THRESHOLD			=		50
+NUM_TEST_REPEATS 		= 		20
+NUM_TRAIN_SAMPS 		= 		100
+EDGE_THRESHOLD			=		50
+
+COARSE 					=		1
 
 """ Hyperparameters """
 if COARSE:
 	alphas = [0.01, 0.1, 1, 5, 10, 100, 1000]
 	betas = [0.01, 0.1, 1, 5, 10, 100, 1000]
 else:
-	alphas = [0.00001, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1]
-	betas = [1.0, 2.0, 4.0, 5.0, 8.0, 10.0]
-
-# create a results directory
-if not os.path.isdir('res'):
-	os.makedirs('res')
-
-# write out the alphas and betas chosen
-print('Writing alphas to file...')
-fid = open(os.path.join('res','alphas.txt'), 'w')
-np.array(alphas).tofile(fid, sep='\n', format='%.2f')
-fid.close()
-
-print('Writing betas to file...')
-fid = open(os.path.join('res','betas.txt'), 'w')
-np.array(betas).tofile(fid, sep='\n', format='%.2f')
-fid.close()
-
+	print('fine-tuned params not selected')
+	exit(0)
 
 """ Read the files """
-dataDir = 'data/'
-meshFile = 'MESHData.mesh'
-latFile = 'LATSpatialData.txt'
+meshFile = meshNames[PATIENT_MAP]
+latFile = latNames[PATIENT_MAP]
 nm = meshFile[0:-5]
+patient = nm[7:10]
+
+# create a results directory
+resDir = os.path.join('..','res_reg')
+if not os.path.isdir(resDir):
+	os.makedirs(resDir)
+
+resFileNMSE = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_nmse.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
+with open(resFileNMSE, 'w') as fid:
+	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
+
+resFileSNR = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_snr.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
+with open(resFileSNR, 'w') as fid:
+	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
+
+resFileMAE = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_mae.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
+with open(resFileMAE, 'w') as fid:
+	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
+
+resFileNRMSE = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_nrmse.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
+with open(resFileNRMSE, 'w') as fid:
+	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
 
 print('Reading files for ' + nm + ' ...\n')
 [coordinateMatrix, connectivityMatrix] = readMesh(dataDir + meshFile)
-[latCoords, latVals] = readLAT(dataDir + latFile)
+[allLatCoord, allLatVal] = readLAT(dataDir + latFile)
 
-N = len(coordinateMatrix)	# number of vertices in the graph
-M = len(latCoords)			# number of signal samples
+n = len(coordinateMatrix)
 
-IDX = [i for i in range(N)]		# ordered vertex indices and coordinates
-COORD = [coordinateMatrix[i] for i in IDX]
+mapIdx = [i for i in range(n)]
+mapCoord = [coordinateMatrix[i] for i in mapIdx]
 
-# Map data points to mesh coordinates
-coordKDtree = cKDTree(coordinateMatrix)
-[dist, idxs] = coordKDtree.query(latCoords, k=1)
+allLatIdx, allLatCoord, allLatVal = mapSamps(mapIdx, mapCoord, allLatCoord, allLatVal)
 
-IS_SAMP = [False for i in range(N)]		# binary indicator for vertex sampled or not
-LAT = [0 for i in range(N)]
+M = len(allLatIdx)
+
+# KD Tree to find the nearest mesh vertex
+k = 6
+coordKDtree = cKDTree(allLatCoord)
+[dist, nearestVers] = coordKDtree.query(allLatCoord, k=k)
+
+anomalous = np.zeros(M)
+
 for i in range(M):
-	verIdx = idxs[i]
-	IS_SAMP[verIdx] = True
-	LAT[verIdx] = latVals[i]
+	verCoord = allLatCoord[i]
+	verVal = allLatVal[i]
 
-# (short) lists of sampled vertices, coordinates, and  LAT values
-SAMP_IDX = [IDX[i] for i in range(N) if IS_SAMP[i] is True]
-SAMP_COORD = [COORD[i] for i in range(N) if IS_SAMP[i] is True]
-SAMP_LAT = [LAT[i] for i in range(N) if IS_SAMP[i] is True]
+	neighbors = [nearestVers[i, n] for n in range(1,k) if dist[i,n] < 10]
 
-M = len(SAMP_IDX)
+	cnt = 0
+	for neighVer in neighbors:
+		neighVal = allLatVal[neighVer]
 
-# NN interpolation of unknown vertices
-UNKNOWN = [COORD[i] for i in range(N) if IS_SAMP[i] is False]
-UNKNOWN = griddata(np.array(SAMP_COORD), np.array(SAMP_LAT), np.array(UNKNOWN), method='nearest')
-currIdx = 0
-for i in range(N):
-	if IS_SAMP[i] is False:
-		LAT[i] = UNKNOWN[currIdx]
-		currIdx += 1
+		if abs(verVal - neighVal) > 50:
+			cnt += 1
+		else:
+			break
 
-# For colorbar ranges
-MINLAT = math.floor(min(SAMP_LAT)/10)*10
-MAXLAT = math.ceil(max(SAMP_LAT)/10)*10
+	if cnt == len(neighbors):
+		anomalous[i] = 1
 
-"""
-Get edges and corresponding adjacent triangles.
+latIdx = [allLatIdx[i] for i in range(M) if anomalous[i] == 0]
+latCoords = [allLatCoord[i] for i in range(M) if anomalous[i] == 0]
+latVals = [allLatVal[i] for i in range(M) if anomalous[i] == 0]
 
-EDGES: list of edges, edge = set(v_i, v_j)
-excl_midpt: midpoint of each removed edge (for visualization)
-"""
+M = len(latIdx)
 
-print('Generating edge matrix ...')
-[EDGES, excl_midpt] = getE(coordinateMatrix, connectivityMatrix, LAT, SPARSIFY_THRESHOLD)
+mapLAT = [0 for i in range(n)]
+for i in range(M):
+	mapLAT[latIdx[i]] = latVals[i]
 
+edgeFile = os.path.join('..', 'E_p{}.npy'.format(patient))
+if not os.path.isfile(edgeFile):
+	[EDGES, TRI] = edgeMatrix(coordinateMatrix, connectivityMatrix)
 
-""" 
-A: NxN unweighted adjacency matrix
-D: NxN degree matrix
-I: NxN identity matrix 
+	print('Writing edge matrix to file...')
+	with open(edgeFile, 'wb') as fid:
+		np.save(fid, EDGES)
+else:
+	EDGES = np.load(edgeFile, allow_pickle=True)
 
-L: NxN Laplace matrix
-
-"""
-print('Calculating adjacency matrix ...')
-A = getUnWeightedAdj(N, EDGES)
-D = np.diag(A.sum(axis=1))
-I = np.identity(N)
-
-print('Calculating Laplacian matrix ...')
-L = D - A
-
-
-""" Cross-validation """
-folds = 10
-kf12 = KFold(n_splits=folds, shuffle=True)
-
-mse = np.zeros((len(alphas), len(betas)))
-nmse = np.zeros((len(alphas), len(betas)))
-rmse = np.zeros((len(alphas), len(betas)))
-wmse = np.zeros((len(alphas), len(betas)))
-snr = np.zeros((len(alphas), len(betas)))
+sampLst = [i for i in range(M)]
 
 for a_idx in range(len(alphas)):
 	alpha = alphas[a_idx]
@@ -162,101 +156,57 @@ for a_idx in range(len(alphas)):
 
 		print('\nCross-validating alpha=' + str(alpha) + ', beta=' + str(beta))
 
-		fold = 0
+		magicNMSE = [0 for i in range(NUM_TEST_REPEATS)]
+		magicSNR = [0 for i in range(NUM_TEST_REPEATS)]
+		magicMAE = [0 for i in range(NUM_TEST_REPEATS)]
+		magicNRMSE = [0 for i in range(NUM_TEST_REPEATS)]
 
-		yhat = np.zeros((N,1))
+		for test in range(NUM_TEST_REPEATS):
+			
+			print('test #{:g} of {:g}.'.format(test + 1, NUM_TEST_REPEATS))
 
-		for tr_i, tst_i in kf12.split(SAMP_IDX):
+			tr_i = random.sample(sampLst, NUM_TRAIN_SAMPS)
+			tst_i = [i for i in sampLst if i not in tr_i]
 
-			print('\tFold ' + str(fold))
+			# get map indices of training/test vertices
+			TrIdx = sorted(np.take(latIdx, tr_i))
+			TstIdx = sorted(np.take(latIdx, tst_i))
 
-			# number of labelled and unlabelled vertices in this fold
-			trLen = len(tr_i)
-			tstLen = len(tst_i)
+			# get training values and coordinates
+			TrVal = [mapLAT[i] for i in TrIdx]
+			TrCoord = [mapCoord[i] for i in TrIdx]
 
-			# get vertex indices of labelled/unlabelled nodes
-			TrIdx = sorted(np.take(SAMP_IDX, tr_i))
-			TstIdx = sorted(np.take(SAMP_IDX, tst_i))
 
-			# partially sampled input y and masking matrices M_l and M_u
-			y = np.zeros((N,1))			
-			M_l = np.zeros((N,N))
-			M_u = np.zeros((N,N))
+			""" MAGIC-LAT estimate """
+			latEst = magicLAT(coordinateMatrix, connectivityMatrix, EDGES, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD, alpha, beta)
 
-			for i in range(N):
-				if i in TrIdx:
-					y[i] = LAT[i]
-					M_l[i,i] = float(1)
-				else:
-					M_u[i,i] = float(1)
 
-					
-			T = np.linalg.inv(M_l + alpha*M_u + beta*L)
+			""" Error metrics """
+			TstVal = [mapLAT[i] for i in TstIdx]
+			TstValEst = latEst[TstIdx]
 
-			# Compute graph interpolation estimate for unlabelled vertices in this fold
-			yhatFold = np.matmul(T, y)
-			yhatFold = yhatFold[TstIdx]
+			nmse, snr, mae, nrmse = compute_metrics(TstVal, TstValEst)
 
-			# Save the estimated value for this vertex
-			for i in range(tstLen):
-				verIdx = TstIdx[i]
-				latEst = yhatFold[i]
-				yhat[verIdx] = latEst
+			magicNMSE[test] = nmse
+			magicSNR[test] = snr
+			magicMAE[test] = mae
+			magicNRMSE[test] = nrmse
 
-			fold += 1
+		with open(resFileNMSE, 'a') as fid:
+			fid.write('\n')
+			fid.write('{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}'.format(alpha, beta, np.average(magicNMSE), np.std(magicNMSE)))
 
-		# when entire estimate done (10 folds), compute error metrics
-		Vec = [abs(yhat[i] - LAT[i]) for i in range(N) if IS_SAMP[i] is True]
-		n, bins = np.histogram(Vec, bins=25, range=(0, 250))
-		freq = n/sum(n)
-		errVecW = []
-		for i in range(M):
-			elem = Vec[i]
-			for j, val in enumerate(bins):
-				if val > elem:
-					idx = j - 1
-					break
-			weightedErr = elem*freq[idx]
-			errVecW.append(weightedErr)
-		errVecW = np.array(errVecW)
-		errVec = np.array(Vec)
+		with open(resFileSNR, 'a') as fid:
+			fid.write('\n')
+			fid.write('{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}'.format(alpha, beta, np.average(magicSNR), np.std(magicSNR)))
 
-		sigPower = np.sum((np.array(SAMP_LAT) - np.mean(SAMP_LAT)) ** 2)
+		with open(resFileMAE, 'a') as fid:
+			fid.write('\n')
+			fid.write('{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}'.format(alpha, beta, np.average(magicMAE), np.std(magicMAE)))
 
-		mse[a_idx][b_idx] = 1/M*np.sum(errVec ** 2)
-		nmse[a_idx][b_idx] = np.sum(errVec ** 2)/sigPower
-		rmse[a_idx][b_idx] = np.sqrt(mse[a_idx][b_idx])
-		wmse[a_idx][b_idx] = 1/M*np.sum(errVecW ** 2)
+		with open(resFileNRMSE, 'a') as fid:
+			fid.write('\n')
+			fid.write('{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}'.format(alpha, beta, np.average(magicNRMSE), np.std(magicNRMSE)))
 
-		snr[a_idx][b_idx] = 20*np.log10(sigPower/(M*mse[a_idx][b_idx]))
-
-		print('{:.2f} {:.2f} {:.2f} {:.2f} {:.2f}'.format(mse[a_idx][b_idx], nmse[a_idx][b_idx], rmse[a_idx][b_idx], wmse[a_idx][b_idx], snr[a_idx][b_idx]))
-
-print()
-
-print('Writing mse to file...')
-fid = open(os.path.join('res', 'mse.txt'), 'w')
-mse.tofile(fid, sep='\n', format='%.2f')
-fid.close()
-
-print('Writing wmse to file...')
-fid = open(os.path.join('res','wmse.txt'), 'w')
-wmse.tofile(fid, sep='\n', format='%.2f')
-fid.close()
-
-print('Writing snr to file...')
-fid = open(os.path.join('res','snr.txt'), 'w')
-snr.tofile(fid, sep='\n', format='%.2f')
-fid.close()
-
-print('Writing nmse to file...')
-fid = open(os.path.join('res', 'nmse.txt'), 'w')
-nmse.tofile(fid, sep='\n', format='%.2f')
-fid.close()
-
-print('Writing rmse to file...')
-fid = open(os.path.join('res', 'rmse.txt'), 'w')
-rmse.tofile(fid, sep='\n', format='%.2f')
-fid.close()
 
 print('\nTest complete.\n')
