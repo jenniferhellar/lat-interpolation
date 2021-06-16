@@ -6,14 +6,14 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 
-from cotanW import *
+# from cotanW import *
 
 # nearest-neighbor interpolation
 from scipy.interpolate import griddata
 
 
 def edgeMatrix(coordinateMatrix, connectivityMatrix):
-	""" 
+	"""
 	Computes a list of edges in the graph, based on the triangles in
 	connectivityMatrix, removing edges with a deltaLAT > thresh.  Returns
 	a numpy array of the edges and a list of midpoints of removed edges,
@@ -84,7 +84,7 @@ def updateEdges(coordinateMatrix, edges, lat, thresh):
 
 
 def getE(coordinateMatrix, connectivityMatrix, LAT, thresh):
-	""" 
+	"""
 	Computes a list of edges in the graph, based on the triangles in
 	connectivityMatrix, removing edges with a deltaLAT > thresh.  Returns
 	a numpy array of the edges and a list of midpoints of removed edges,
@@ -243,8 +243,8 @@ def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-03, beta
 	# 	ax.text(excl_midpt[i,0], excl_midpt[i,1], excl_midpt[i,2], txt, color='k', fontsize='x-small')
 
 	# ax.set_title('Section of Interest')
-	# ax.set_xlabel('X', fontweight ='bold') 
-	# ax.set_ylabel('Y', fontweight ='bold') 
+	# ax.set_xlabel('X', fontweight ='bold')
+	# ax.set_ylabel('Y', fontweight ='bold')
 	# ax.set_zlabel('Z', fontweight ='bold')
 	# ax.view_init(elev, azim)
 	# # cax = fig.add_axes([thisAx.get_position().x1+0.03,thisAx.get_position().y0,0.01,thisAx.get_position().height]) # vertical bar to the right
@@ -272,7 +272,7 @@ def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-03, beta
 		else:
 			M_u[i,i] = float(1)
 
-			
+
 	T = np.linalg.inv(M_l + alpha*M_u + beta*L)
 
 	latEst = np.matmul(T, lat)
