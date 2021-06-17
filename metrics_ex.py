@@ -12,7 +12,12 @@ import random
 # plotting packages
 from vedo import *
 
+# loading images
 import cv2
+
+# Gaussian process regression interpolation
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF
 
 # functions to read the files
 from readMesh import readMesh
@@ -27,7 +32,7 @@ from magicLAT import *
 p033 = 9
 p034 = 14
 p035 = 18
-p037 = 20
+p037 = 21
 """
 PATIENT_MAP				=		21
 
@@ -186,12 +191,16 @@ TstVal = [sLAT[i] for i in TstIdx]
 """ MAGIC-LAT estimate """
 latEst = magicLAT(sVertices, sFaces, EDGES, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
 
+""" Create GPR kernel and regressor """
+gp_kernel = RBF(length_scale=0.01) + RBF(length_scale=0.1) + RBF(length_scale=1)
+gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
 
-""" Error metrics """
-nmse = calcNMSE(TstVal, latEst[TstIdx])
-mae = calcMAE(TstVal, latEst[TstIdx])
-print(nmse)
-print(mae)
+""" GPR estimate """
+# fit the GPR with training samples
+gpr.fit(TrCoord, TrVal)
+
+# predict the entire signal
+latEstGPR = gpr.predict(sVertices, return_std=False)
 
 
 mesh = Mesh([sVertices, sFaces])
@@ -203,30 +212,114 @@ MINLAT = math.floor(min(allLatVal)/10)*10
 MAXLAT = math.ceil(max(allLatVal)/10)*10
 
 elev = 0
-azim = 120
+azimuth = 120
 roll = -45
 
-# # Plot 0: Ground truth
-# trueSigPoints = Points(sLatCoord, r=10).cmap('rainbow_r', sLatVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
-# show(mesh, trueSigPoints, title='All raw points', axes=9).close()
 
-
+"""
+Figure 0: Ground truth (entire), training points, and MAGIC-LAT (entire)
+"""
 plt = Plotter(N=3, axes=9)
 
 # Plot 0: Ground truth
 trueSigPoints = Points(sLatCoord, r=10).cmap('rainbow_r', sLatVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
-plt.show(mesh, trueSigPoints, 'all known points', azimuth=azim, elevation=elev, roll=roll, at=0)
+plt.show(mesh, trueSigPoints, 'all known points', azimuth=azimuth, elevation=elev, roll=roll, at=0)
 
 # Plot 1: Training points
 trainPoints = Points(TrCoord, r=10).cmap('rainbow_r', TrVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
 plt.show(mesh, trainPoints, 'training points', at=1)
 
 # Plot 2: MAGIC-LAT output signal
-pts = Points(sVertices, r=10).cmap('rainbow_r', latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
+magicPoints = Points(sVertices, r=10).cmap('rainbow_r', latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
+
+plt.show(mesh, magicPoints, 'interpolation result', title='MAGIC-LAT', at=2, interactive=True)
+plt.screenshot(filename=os.path.join(outDir, 'magic.png'), returnNumpy=False)
+plt.close()
+
+
+
+"""
+Figure 1: Ground truth (entire), training points, and GPR (entire)
+"""
+plt = Plotter(N=3, axes=9)
+
+# Plot 0: Ground truth
+plt.show(mesh, trueSigPoints, 'all known points', azimuth=azimuth, elevation=elev, roll=roll, at=0)
+# Plot 1: Training points
+plt.show(mesh, trainPoints, 'training points', at=1)
+# Plot 2: GPR output signal
+gprPoints = Points(sVertices, r=10).cmap('rainbow_r', latEstGPR, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
+
+plt.show(mesh, gprPoints, 'interpolation result', title='GPR', at=2, interactive=True)
+plt.screenshot(filename=os.path.join(outDir, 'gpr.png'), returnNumpy=False)
+plt.close()
 
 # mesh.interpolateDataFrom(pts, N=1).cmap('rainbow_r').addScalarBar()
 
-plt.show(mesh, pts, 'interpolation result', title='MAGIC-LAT', at=2, interactive=True)
+elev = 0
+azim = [0, 90, 180, 270]
+roll = -45
 
-plt.screenshot(filename=os.path.join(outDir, 'metrics_ex.png'), scale=2, returnNumpy=False)
+"""
+Figure 2: Ground truth (test points only - for ssim)
+"""
+testPoints = Points(TstCoord, r=10).cmap('rainbow_r', TstVal, vmin=MINLAT, vmax=MAXLAT)
+plt = Plotter(N=1, axes=0)
+for a in azim:
+	plt.show(mesh, testPoints, azimuth=a, elevation=elev, roll=roll, title='true, azimuth={:g}'.format(a))
+	plt.screenshot(filename=os.path.join(outDir, 'true{:g}.png'.format(a)), returnNumpy=False)
+
+"""
+Figure 3: MAGIC-LAT estimate (test points only - for ssim)
+"""
+testEst = Points(TstCoord, r=10).cmap('rainbow_r', latEst[TstIdx], vmin=MINLAT, vmax=MAXLAT)
+
+for a in azim:
+	plt.show(mesh, testEst, azimuth=a, elevation=elev, roll=roll, title='MAGIC-LAT, azimuth={:g}'.format(a))
+	plt.screenshot(filename=os.path.join(outDir, 'estimate{:g}.png'.format(a)), returnNumpy=False)
+
+"""
+Figure 4: GPR estimate (test points only - for ssim)
+"""
+testEstGPR = Points(TstCoord, r=10).cmap('rainbow_r', latEstGPR[TstIdx], vmin=MINLAT, vmax=MAXLAT)
+
+for a in azim:
+	plt.show(mesh, testEstGPR, azimuth=a, elevation=elev, roll=roll, title='GPR, azimuth={:g}'.format(a))
+	plt.screenshot(filename=os.path.join(outDir, 'estimateGPR{:g}.png'.format(a)), returnNumpy=False)
+
 plt.close()
+
+
+"""
+Figure 5: quLATi estimate (test points only for ssim)
+"""
+# TODO
+
+
+"""
+Error metrics
+"""
+nmse = calcNMSE(TstVal, latEst[TstIdx])
+nmseGPR = calcNMSE(TstVal, latEstGPR[TstIdx])
+
+mae = calcMAE(TstVal, latEst[TstIdx])
+maeGPR = calcMAE(TstVal, latEstGPR[TstIdx])
+
+ssim = 0
+ssimGPR = 0
+for a in azim:
+	figTruth = cv2.imread(os.path.join(outDir, 'true{:g}.png'.format(a)))
+	figEst = cv2.imread(os.path.join(outDir, 'estimate{:g}.png'.format(a)))
+	figEstGPR = cv2.imread(os.path.join(outDir, 'estimateGPR{:g}.png'.format(a)))
+
+	ssim += calcSSIM(figTruth, figEst)
+	ssimGPR += calcSSIM(figTruth, figEstGPR)
+
+ssim = ssim / len(azim)
+ssimGPR = ssimGPR / len(azim)
+
+with open(os.path.join(outDir, 'metrics_ex.txt'), 'w') as fid:
+	fid.write('{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR'))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseGPR))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeGPR))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}'.format('SSIM', ssim, ssimGPR))

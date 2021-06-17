@@ -1,4 +1,5 @@
 data/
+results_wip/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
