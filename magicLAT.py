@@ -182,7 +182,7 @@ def getUnWeightedAdj(n, edges):
 	return A
 
 
-def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-03, beta=1):
+def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-04, beta=0.5):
 
 	N = len(V)	# number of vertices in the graph
 	M = len(trIdx)			# number of signal samples

@@ -3,7 +3,7 @@
 Utility functions for MAGIC-LAT.
 --------------------------------------------------------------------------------
 
-Description: Utility functions to compute graph edges from triangle mesh and 
+Description: Utility functions to compute graph edges from triangle mesh and
 corresponding adjacency matrix from the edges.
 
 Requirements: numpy
@@ -21,8 +21,6 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from numpy.linalg import norm
 import math
-
-from skimage.metrics import structural_similarity as ssim
 
 # KD-Tree for mapping to nearest point
 from scipy.spatial import cKDTree
@@ -61,15 +59,21 @@ def mapSamps(IDX, COORD, coords, vals):
 
 
 
+
+
+def calcMSE(sig, sigEst):
+	n = len(sig)
+
+	err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+	err = np.array(err)
+
+	return np.sum(err ** 2)
+
+
 def calcMAE(sig, sigEst):
 	delta = [abs(sig[i] - sigEst[i]) for i in range(len(sig))]
 	delta = np.array(delta)
 	return np.average(delta)
-
-
-def calcSSIM(figTruth, figEst):
-	s = ssim(figTruth, figEst, multichannel=True)
-	return s
 
 
 
@@ -83,16 +87,26 @@ def calcPercError(sig, sigEst):
 	return float(np.sum(err))/n
 
 
-def calcNMSE(sig, sigEst):
-	n = len(sig)
+def calcNMSE(sig, sigEst, multichannel=False):
+	if multichannel:
+		print(sig.shape, sigEst.shape)
+		err = (np.array(sigEst) - np.array(sig)) ** 2
+		err = np.sum(err, axis=0, keepdims = True)
+		meanvec = np.array(np.mean(sig, axis=0), ndmin=2)
+		# sigPower = np.sum((np.array(sig) - meanvec), axis=0, keepdims = True)
+		sigPower = np.sum(np.array(sig), axis=0, keepdims=True)
 
-	err = [abs(sigEst[i] - sig[i]) for i in range(n)]	
-	err = np.array(err)
+		nmse = err / sigPower
+	else:
+		n = len(sig)
 
-	sigKnown = [sig[i] for i in range(n)]
-	sigPower = np.sum((np.array(sigKnown) - np.mean(sigKnown)) ** 2)
+		err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+		err = np.array(err)
 
-	nmse = np.sum(err ** 2)/sigPower
+		sigKnown = [sig[i] for i in range(n)]
+		sigPower = np.sum((np.array(sigKnown) - np.mean(sigKnown)) ** 2)
+
+		nmse = np.sum(err ** 2)/sigPower
 
 	return nmse
 
@@ -113,7 +127,7 @@ def calcNRMSE(sig, sigEst):
 
 def calcSNR(sig, sigEst):
 	n = len(sig)
-	err = [abs(sigEst[i] - sig[i]) for i in range(n)]	
+	err = [abs(sigEst[i] - sig[i]) for i in range(n)]
 	err = np.array(err)
 
 	sigKnown = [sig[i] for i in range(n)]
@@ -253,8 +267,8 @@ def getAdjMatrixCotan(coordinateMatrix, edges, triangles):
 			else:
 				print('unable to identify edge')
 				exit()
-		
-		e = list(e)	
+
+		e = list(e)
 		v_i = e[0]
 		v_j = e[1]
 
@@ -281,8 +295,8 @@ def getAdjMatrixExp(coordinateMatrix, edges, triangles):
 	# d = 0
 	# for i in range(len(edges)):
 	# 	e = edges[i]
-		
-	# 	e = list(e)	
+
+	# 	e = list(e)
 	# 	v_i = e[0]
 	# 	v_j = e[1]
 
@@ -295,8 +309,8 @@ def getAdjMatrixExp(coordinateMatrix, edges, triangles):
 	for i in range(len(edges)):
 
 		e = edges[i]
-		
-		e = list(e)	
+
+		e = list(e)
 		v_i = e[0]
 		v_j = e[1]
 

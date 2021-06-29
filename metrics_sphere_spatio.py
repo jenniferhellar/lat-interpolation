@@ -214,35 +214,83 @@ b = [0, 0]
 g = [0, 0]
 r = [0, 0]
 
+bins = 256
+
 for a in azim:
 	img = cv2.imread(os.path.join(outDir, 'true{:g}.png'.format(a)), cv2.IMREAD_GRAYSCALE)
 	n_black_px = np.sum(img == 0)
+	N = np.sum(img > 0)
 
 	figTruth = cv2.imread(os.path.join(outDir, 'true{:g}.png'.format(a)))
 	figEst = cv2.imread(os.path.join(outDir, 'estimate{:g}.png'.format(a)))
 	figEstGPR = cv2.imread(os.path.join(outDir, 'estimateGPR{:g}.png'.format(a)))
 
 	# Calculate histograms
-	hist1 = cv2.calcHist([figTruth],[0],None,[256],[0,256])
-	hist2 = cv2.calcHist([figTruth],[1],None,[256],[0,256])
-	hist3 = cv2.calcHist([figTruth],[2],None,[256],[0,256])
+	hist1 = cv2.calcHist([figTruth],[0],None,[bins],[0,256])
+	hist2 = cv2.calcHist([figTruth],[1],None,[bins],[0,256])
+	hist3 = cv2.calcHist([figTruth],[2],None,[bins],[0,256])
+
+	magic_hist1 = cv2.calcHist([figEst],[0],None,[bins],[0,256])
+	magic_hist2 = cv2.calcHist([figEst],[1],None,[bins],[0,256])
+	magic_hist3 = cv2.calcHist([figEst],[2],None,[bins],[0,256])
+
+	gpr_hist1 = cv2.calcHist([figEstGPR],[0],None,[bins],[0,256])
+	gpr_hist2 = cv2.calcHist([figEstGPR],[1],None,[bins],[0,256])
+	gpr_hist3 = cv2.calcHist([figEstGPR],[2],None,[bins],[0,256])
+
+	true_mean_r = np.zeros((bins, 2))
+	true_mean_g = np.zeros((bins, 2))
+	true_mean_b = np.zeros((bins, 2))
+
+	magic_mean_r = np.zeros((bins, 2))
+
+	gpr_mean_r = np.zeros((bins, 2))
+
+	for row in range(figTruth.shape[0]):
+		for col in range(figTruth.shape[1]):
+			r_bin = figTruth[row, col, 2]
+			g_bin = figTruth[row, col, 1]
+			b_bin = figTruth[row, col, 0]
+
+			true_mean_r[r_bin] += np.array([row, col])
+
+			r_bin = figEst[row, col, 2]
+			g_bin = figEst[row, col, 1]
+			b_bin = figEst[row, col, 0]
+
+			magic_mean_r[r_bin] += np.array([row, col])
+
+			r_bin = figEstGPR[row, col, 2]
+			g_bin = figEstGPR[row, col, 1]
+			b_bin = figEstGPR[row, col, 0]
+
+			gpr_mean_r[r_bin] += np.array([row, col])
+
+	true_mean_r /= hist3
+	magic_mean_r /= magic_hist3
+	gpr_mean_r /= gpr_hist3
+
 	hist1[0] -= n_black_px
 	hist2[0] -= n_black_px
 	hist3[0] -= n_black_px
 
-	magic_hist1 = cv2.calcHist([figEst],[0],None,[256],[0,256])
-	magic_hist2 = cv2.calcHist([figEst],[1],None,[256],[0,256])
-	magic_hist3 = cv2.calcHist([figEst],[2],None,[256],[0,256])
+	hist1 /= N
+	hist2 /= N
+	hist3 /= N
 	magic_hist1[0] -= n_black_px
 	magic_hist2[0] -= n_black_px
 	magic_hist3[0] -= n_black_px
 
-	gpr_hist1 = cv2.calcHist([figEstGPR],[0],None,[256],[0,256])
-	gpr_hist2 = cv2.calcHist([figEstGPR],[1],None,[256],[0,256])
-	gpr_hist3 = cv2.calcHist([figEstGPR],[2],None,[256],[0,256])
+	magic_hist1 /= N
+	magic_hist2 /= N
+	magic_hist3 /= N
 	gpr_hist1[0] -= n_black_px
 	gpr_hist2[0] -= n_black_px
 	gpr_hist3[0] -= n_black_px
+
+	gpr_hist1 /= N
+	gpr_hist2 /= N
+	gpr_hist3 /= N
 
 	plt.subplot(321, title='Ground truth image'), plt.imshow(figTruth)
 	plt.subplot(322, title='Ground truth histogram'),
@@ -260,12 +308,31 @@ for a in azim:
 	plt.tight_layout()
 	plt.show()
 
+	true_spatio_r = np.zeros((bins, 3))
+	true_spatio_r[:, 0] = hist3.ravel()
+	true_spatio_r[:, 1] = true_mean_r[:,0].ravel()
+	true_spatio_r[:, 2] = true_mean_r[:,1].ravel()
+
+	magic_spatio_r = np.zeros((bins, 3))
+	magic_spatio_r[:, 0] = magic_hist3.ravel()
+	magic_spatio_r[:, 1] = magic_mean_r[:,0].ravel()
+	magic_spatio_r[:, 2] = magic_mean_r[:,1].ravel()
+
+	gpr_spatio_r = np.zeros((bins, 3))
+	gpr_spatio_r[:, 0] = gpr_hist3.ravel()
+	gpr_spatio_r[:, 1] = gpr_mean_r[:,0].ravel()
+	gpr_spatio_r[:, 2] = gpr_mean_r[:,1].ravel()
+
 	b[0] += calcNMSE(hist1, magic_hist1)
 	b[1] += calcNMSE(hist1, gpr_hist1)
 	g[0] += calcNMSE(hist2, magic_hist2)
 	g[1] += calcNMSE(hist2, gpr_hist2)
 	r[0] += calcNMSE(hist3, magic_hist3)
 	r[1] += calcNMSE(hist3, gpr_hist3)
+
+	print(calcNMSE(true_spatio_r, magic_spatio_r, multichannel=True))
+	print(calcNMSE(true_spatio_r, gpr_spatio_r, multichannel=True))
+	exit()
 
 t = len(azim)
 
