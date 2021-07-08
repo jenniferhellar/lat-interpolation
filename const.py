@@ -1,8 +1,11 @@
 
 import os
 
-workDir = '/home/jlh24/latproj'
-dataDir = os.path.join(workDir, 'data/')
+# workDir = '/home/jlh24/latproj'
+# dataDir = os.path.join(workDir, 'data/')
+
+workDir = 'D:\jhell\git-repos\lat-interpolation'
+dataDir = os.path.join(workDir, 'data')
 
 meshNames =		['Patient030_I_MESHData8-LV-FAM.mesh',
 'Patient031_I_MESHData2-2-Rp-PVC-LVFAM.mesh',

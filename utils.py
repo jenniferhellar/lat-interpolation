@@ -61,13 +61,23 @@ def mapSamps(IDX, COORD, coords, vals):
 
 
 
-def calcMSE(sig, sigEst):
-	n = len(sig)
+def calcMSE(sig, sigEst, multichannel=False):
+	if multichannel:
+		n = sig.shape[1]	# summing across the number of bins
+		diffsq = (np.array(sigEst) - np.array(sig)) ** 2
+		d = np.sum(diffsq[:, :, 1:], axis=2)	# (x' - x)^2 + (y' - y)^2 = d^2 (pixel distance)
+		mean_err = np.sum(d, axis=1, keepdims=True)
+		hist_err = np.sum(diffsq[:,:,0], axis=1, keepdims=True)
+		return (1/n * hist_err, 1/n * mean_err)
+	else:
+		n = len(sig)
 
-	err = [abs(sigEst[i] - sig[i]) for i in range(n)]
-	err = np.array(err)
+		err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+		err = np.array(err)
 
-	return np.sum(err ** 2)
+		mse = 1/n*np.sum(err ** 2)
+
+	return mse
 
 
 def calcMAE(sig, sigEst):
