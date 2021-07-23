@@ -25,12 +25,16 @@ from sklearn.gaussian_process.kernels import RBF
 from readMesh import readMesh
 from readLAT import readLAT
 
+from js import *
+
 
 from utils import *
 from const import *
 from magicLAT import *
 
-from scipy.spatial.distance import jensenshannon
+# from scipy.spatial.distance import jensenshannon
+
+from scipy.stats import multivariate_normal
 
 
 
@@ -40,7 +44,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		21
+PATIENT_MAP				=		9
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -114,7 +118,7 @@ M = len(latIdx)
 
 print('{:<20}{:g}'.format('n', n))
 print('{:<20}{:g}/{:g}'.format('m', NUM_TRAIN_SAMPS, M))
-print('{:<20}{:g}'.format('ignored', numPtsIgnored))
+print('{:<20}{:g}\n'.format('ignored', numPtsIgnored))
 # exit()
 
 mapLAT = [0 for i in range(n)]
@@ -271,13 +275,20 @@ nmseGPR = calcNMSE(TstVal, latEstGPR[TstIdx])
 mae = calcMAE(TstVal, latEst[TstIdx])
 maeGPR = calcMAE(TstVal, latEstGPR[TstIdx])
 
+magic_spatio_corr = []
+gpr_spatio_corr = []
+
+magic_spatio_chi = []
+gpr_spatio_chi = []
+
 magic_corr = []
 gpr_corr = []
 
 magic_chi = []
 gpr_chi = []
 
-bins = 64
+bins = 16
+binEdges = [i*256/bins for i in range(bins+1)]
 
 for a in azim:
 	img = cv2.imread(os.path.join(outDir, 'true{:g}.png'.format(a)), cv2.IMREAD_GRAYSCALE)
@@ -308,29 +319,46 @@ for a in azim:
 	gpr_hist[0, 0, 0] -= n_black_px
 	gpr_hist_flat = cv2.normalize(gpr_hist, gpr_hist).flatten()
 
-	true_mean = np.zeros((3, bins, 2))
-	magic_mean = np.zeros((3, bins, 2))
-	gpr_mean = np.zeros((3, bins, 2))
+	true_mean = np.zeros((bins, bins, bins, 2))
+	true_sigma = np.zeros((bins, bins, bins, 2, 2))
 
-	for colorval in range(bins):
-		for ch in range(3):
-			pxls = np.column_stack(np.where(figTruth[:, :, ch] == colorval))
-			if pxls.shape[0] == 0:
-				true_mean[ch, colorval] = np.array([[0, 0]])
-			else:
-				true_mean[ch, colorval] = np.mean(pxls, axis=0)
+	magic_mean = np.zeros((bins, bins, bins, 2))
+	magic_sigma = np.zeros((bins, bins, bins, 2, 2))
 
-			pxls = np.column_stack(np.where(figEst[:, :, ch] == colorval))
-			if pxls.shape[0] == 0:
-				magic_mean[ch, colorval] = np.array([[0, 0]])
-			else:
-				magic_mean[ch, colorval] = np.mean(pxls, axis=0)
+	gpr_mean = np.zeros((bins, bins, bins, 2))
+	gpr_sigma = np.zeros((bins, bins, bins, 2, 2))
 
-			pxls = np.column_stack(np.where(figEstGPR[:, :, ch] == colorval))
-			if pxls.shape[0] == 0:
-				gpr_mean[ch, colorval] = np.array([[0, 0]])
-			else:
-				gpr_mean[ch, colorval] = np.mean(pxls, axis=0)
+	for r_i, r_v in enumerate(binEdges):
+		for g_i, g_v in enumerate(binEdges):
+			for b_i, b_v in enumerate(binEdges):
+				if r_v < 256 and g_v < 256 and b_v < 256:
+					if true_hist[r_i, g_i, b_i] > 0 or magic_hist[r_i, g_i, b_i] > 0 or gpr_hist[r_i, g_i, b_i] > 0:
+						true_pxls = np.column_stack(np.where((figTruth[:, :, 0] >= r_v) & (figTruth[:, :, 0] < binEdges[r_i + 1]) & \
+							(figTruth[:, :, 1] >= g_v) & (figTruth[:, :, 1] < binEdges[g_i + 1]) & \
+							(figTruth[:, :, 2] >= b_v) & (figTruth[:, :, 2] < binEdges[b_i + 1])))
+						if true_pxls.shape[0] == 0:
+							true_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
+						else:
+							true_mean[r_i, g_i, b_i] = np.mean(true_pxls, axis=0)
+							true_sigma[r_i, g_i, b_i] = np.cov(true_pxls, rowvar=0)
+				
+						pxls = np.column_stack(np.where((figEst[:, :, 0] >= r_v) & (figEst[:, :, 0] < binEdges[r_i + 1]) & \
+									(figEst[:, :, 1] >= g_v) & (figEst[:, :, 1] < binEdges[g_i + 1]) & \
+									(figEst[:, :, 2] >= b_v) & (figEst[:, :, 2] < binEdges[b_i + 1])))
+						if pxls.shape[0] == 0:
+							magic_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
+						else:
+							magic_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
+							magic_sigma[r_i, g_i, b_i] = np.cov(pxls, rowvar=0)
+
+						pxls = np.column_stack(np.where((figEstGPR[:, :, 0] >= r_v) & (figEstGPR[:, :, 0] < binEdges[r_i + 1]) & \
+									(figEstGPR[:, :, 1] >= g_v) & (figEstGPR[:, :, 1] < binEdges[g_i + 1]) & \
+									(figEstGPR[:, :, 2] >= b_v) & (figEstGPR[:, :, 2] < binEdges[b_i + 1])))
+						if pxls.shape[0] == 0:
+							gpr_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
+						else:
+							gpr_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
+							gpr_sigma[r_i, g_i, b_i] = np.cov(pxls, rowvar=0)
 
 	plt.subplot(321, title='Ground truth image'), plt.imshow(figTruth)
 	plt.subplot(322, title='Ground truth color histograms'),
@@ -352,7 +380,8 @@ for a in azim:
 	plt.xlim([0,bins])
 
 	plt.tight_layout()
-	plt.show()
+	plt.savefig(os.path.join(outDir, 'colorHist{:g}.png'.format(a)))
+	# plt.show()
 
 	plt.subplot(321, title='Ground truth image'), plt.imshow(figTruth)
 	plt.subplot(322, title='Ground truth flattened histogram'),
@@ -368,23 +397,54 @@ for a in azim:
 	plt.xlim([0,true_hist_flat.shape[0]])
 
 	plt.tight_layout()
-	plt.show()
-
-	true_mean = true_mean / figTruth.shape[0]
-	magic_mean = magic_mean / figTruth.shape[0]
-	gpr_mean = gpr_mean / figTruth.shape[0]
+	plt.savefig(os.path.join(outDir, 'hist{:g}.png'.format(a)))
+	# plt.show()
 
 	magic_corr.append(cv2.compareHist(true_hist_flat, magic_hist_flat, cv2.HISTCMP_CORREL))
 	gpr_corr.append(cv2.compareHist(true_hist_flat, gpr_hist_flat, cv2.HISTCMP_CORREL))
 
-	magic_chi.append(cv2.compareHist(true_hist_flat, magic_hist_flat, cv2.HISTCMP_CHISQR))
-	gpr_chi.append(cv2.compareHist(true_hist_flat, gpr_hist_flat, cv2.HISTCMP_CHISQR))
+	magic_chi.append(cv2.compareHist(true_hist_flat, magic_hist_flat, cv2.HISTCMP_CHISQR_ALT))
+	gpr_chi.append(cv2.compareHist(true_hist_flat, gpr_hist_flat, cv2.HISTCMP_CHISQR_ALT))
+
+	true_hist = cv2.normalize(true_hist, true_hist)
+	magic_hist = cv2.normalize(magic_hist, magic_hist)
+	gpr_hist = cv2.normalize(gpr_hist, gpr_hist)
+
+	magic_similarity = 0
+	gpr_similarity = 0
+
+	for i in range(bins):
+		for j in range(bins):
+			for k in range(bins):
+				magic_js = js(true_mean[i,j,k], magic_mean[i,j,k], true_sigma[i,j,k], magic_sigma[i,j,k], true_hist[i,j,k], magic_hist[i,j,k])
+				
+				num = (true_hist[i,j,k] - np.mean(true_hist)) * (magic_hist[i,j,k] - np.mean(magic_hist))
+				denom = math.sqrt(np.sum((true_hist - np.mean(true_hist)) ** 2) * np.sum((magic_hist - np.mean(magic_hist)) ** 2))
+				magic_similarity += (num / denom) * math.exp(-1 * magic_js)
+
+				gpr_js = js(true_mean[i,j,k], gpr_mean[i,j,k], true_sigma[i,j,k], gpr_sigma[i,j,k], true_hist[i,j,k], gpr_hist[i,j,k])
+
+				num = (true_hist[i,j,k] - np.mean(true_hist)) * (gpr_hist[i,j,k] - np.mean(gpr_hist))
+				denom = math.sqrt(np.sum((true_hist - np.mean(true_hist)) ** 2) * np.sum((gpr_hist - np.mean(gpr_hist)) ** 2))
+				gpr_similarity += (num / denom) * math.exp(-1 * gpr_js)
+
+				# Intersection of histograms
+				# magic_similarity += min(true_hist[i, j, k], magic_hist[i, j, k])*math.exp(-1 * magic_js[i, j, k])
+				# gpr_similarity += min(true_hist[i, j, k], gpr_hist[i, j, k])*math.exp(-1 * gpr_js[i, j, k])
+
+	# print('{:<20.6f}{:<20.6f}\n'.format(magic_similarity, gpr_similarity))
+	magic_spatio_corr.append(magic_similarity)
+	gpr_spatio_corr.append(gpr_similarity)
+
 
 with open(os.path.join(outDir, 'metrics_ex.txt'), 'w') as fid:
 	fid.write('{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR'))
 	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseGPR))
 	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeGPR))
 
+	fid.write('\nColor-Based\n')
+	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('Histogram Corr.', np.mean(magic_corr), np.mean(gpr_corr)))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('Histogram Chi', np.mean(magic_chi), np.mean(gpr_chi)))
+
 	fid.write('\n')
-	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('Color Correlation', np.mean(magic_corr), np.mean(gpr_corr)))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('Color Chi-Squared', np.mean(magic_chi), np.mean(gpr_chi)))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('Spatiogram Corr.', np.mean(magic_spatio_corr), np.mean(gpr_spatio_corr)))
