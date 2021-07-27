@@ -1,5 +1,7 @@
 data/
 results_wip/
+results_repeated_wip/
+quLATi/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

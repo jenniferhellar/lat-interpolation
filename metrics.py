@@ -32,9 +32,7 @@ from utils import *
 from const import *
 from magicLAT import *
 
-# from scipy.spatial.distance import jensenshannon
-
-from scipy.stats import multivariate_normal
+from qulati import gpmi, eigensolver
 
 
 
@@ -138,6 +136,15 @@ else:
 if not os.path.isdir(outDir):
 	os.makedirs(outDir)
 
+"""
+Solve the eigenproblem
+""" 
+
+Q, V, gradV, centroids = eigensolver(vertices, np.array(faces), holes = 0, layers = 10, num = 256)
+
+# model with reduced rank efficiency
+model = gpmi.Matern(vertices, np.array(faces), Q, V, gradV, JAX = False)
+
 sampLst = [i for i in range(M)]
 
 
@@ -170,6 +177,20 @@ gpr.fit(TrCoord, TrVal)
 
 # predict the entire signal
 latEstGPR = gpr.predict(vertices, return_std=False)
+
+""" quLATi estimate """
+obs = np.array(TrVal)
+quLATi_vertices = np.array(TrIdx)
+
+model.set_data(obs, quLATi_vertices)
+model.kernelSetup(smoothness = 3./2.)
+
+# optimize the nugget
+model.optimize(nugget = None, restarts = 5)
+
+pred_mean, pred_stdev = model.posterior(pointwise = True)
+
+latEstquLATi = pred_mean[0:vertices.shape[0]]
 
 
 # For colorbar ranges
@@ -218,13 +239,31 @@ vplt.show(mesh, gprPoints, 'interpolation result', title='GPR', at=2, interactiv
 vplt.screenshot(filename=os.path.join(outDir, 'gpr.png'), returnNumpy=False)
 vplt.close()
 
+"""
+Figure 2: Ground truth (entire), training points, and GPR (entire)
+"""
+vplt = Plotter(N=3, axes=9, offscreen=True)
+
+# Plot 0: Ground truth
+vplt.show(mesh, verPoints, 'all known points', azimuth=azimuth, elevation=elev, roll=roll, at=0)
+# Plot 1: Training points
+vplt.show(mesh, trainPoints, 'training points', at=1)
+# Plot 2: GPR output signal
+quLATiPoints = Points(vertices, r=10).cmap('rainbow_r', latEstquLATi, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
+
+vplt.show(mesh, quLATiPoints, 'interpolation result', title='GPR', at=2, interactive=True)
+vplt.screenshot(filename=os.path.join(outDir, 'quLATi.png'), returnNumpy=False)
+vplt.close()
+
+
 # mesh.interpolateDataFrom(pts, N=1).cmap('rainbow_r').addScalarBar()
 elev = 0
 azim = [-60, 30, 120, 210]
 roll = -45
 whitemesh = Mesh([vertices, faces], c='black')
+
 """
-Figure 2: Ground truth (test points only - for ssim)
+Figure 3: Ground truth (test points only - for ssim)
 """
 vplt = Plotter(N=1, axes=0, offscreen=True)
 testPoints = Points(TstCoord, r=20).cmap('rainbow_r', TstVal, vmin=MINLAT, vmax=MAXLAT)
@@ -235,7 +274,7 @@ for a in azim:
 vplt.close()
 
 """
-Figure 3: MAGIC-LAT estimate (test points only - for ssim)
+Figure 4: MAGIC-LAT estimate (test points only - for ssim)
 """
 vplt = Plotter(N=1, axes=0, offscreen=True)
 testEst = Points(TstCoord, r=20).cmap('rainbow_r', latEst[TstIdx], vmin=MINLAT, vmax=MAXLAT)
@@ -247,7 +286,7 @@ for a in azim:
 vplt.close()
 
 """
-Figure 4: GPR estimate (test points only - for ssim)
+Figure 5: GPR estimate (test points only - for ssim)
 """
 vplt = Plotter(N=1, axes=0, offscreen=True)
 testEstGPR = Points(TstCoord, r=20).cmap('rainbow_r', latEstGPR[TstIdx], vmin=MINLAT, vmax=MAXLAT)
@@ -260,9 +299,16 @@ vplt.close()
 
 
 """
-Figure 5: quLATi estimate (test points only for ssim)
+Figure 6: quLATi estimate (test points only for ssim)
 """
-# TODO
+vplt = Plotter(N=1, axes=0, offscreen=True)
+testEstquLATi = Points(TstCoord, r=20).cmap('rainbow_r', latEstquLATi[TstIdx], vmin=MINLAT, vmax=MAXLAT)
+
+for a in azim:
+	vplt.show(whitemesh, testEstquLATi, azimuth=a, elevation=elev, roll=roll, title='quLATi, azimuth={:g}'.format(a), bg='black')
+	vplt.screenshot(filename=os.path.join(outDir, 'estimatequLATi{:g}.png'.format(a)), returnNumpy=False)
+
+vplt.close()
 
 
 """
@@ -271,21 +317,19 @@ Error metrics
 
 nmse = calcNMSE(TstVal, latEst[TstIdx])
 nmseGPR = calcNMSE(TstVal, latEstGPR[TstIdx])
+nmsequLATi = calcNMSE(TstVal, latEstquLATi[TstIdx])
 
 mae = calcMAE(TstVal, latEst[TstIdx])
 maeGPR = calcMAE(TstVal, latEstGPR[TstIdx])
+maequLATi = calcMAE(TstVal, latEstquLATi[TstIdx])
 
 magic_spatio_corr = []
 gpr_spatio_corr = []
-
-magic_spatio_chi = []
-gpr_spatio_chi = []
+quLATi_spatio_corr = []
 
 magic_corr = []
 gpr_corr = []
-
-magic_chi = []
-gpr_chi = []
+quLATi_corr = []
 
 bins = 16
 binEdges = [i*256/bins for i in range(bins+1)]
@@ -319,6 +363,14 @@ for a in azim:
 	gpr_hist[0, 0, 0] -= n_black_px
 	gpr_hist_flat = cv2.normalize(gpr_hist, gpr_hist).flatten()
 
+	figEstquLATi = cv2.imread(os.path.join(outDir, 'estimatequLATi{:g}.png'.format(a)))
+	figEstquLATi = cv2.cvtColor(figEstquLATi, cv2.COLOR_BGR2RGB)
+	
+	quLATi_hist = cv2.calcHist([figEstquLATi], [0, 1, 2], None, [bins, bins, bins],
+		[0, 256, 0, 256, 0, 256])
+	quLATi_hist[0, 0, 0] -= n_black_px
+	quLATi_hist_flat = cv2.normalize(quLATi_hist, quLATi_hist).flatten()
+
 	true_mean = np.zeros((bins, bins, bins, 2))
 	true_sigma = np.zeros((bins, bins, bins, 2, 2))
 
@@ -327,6 +379,9 @@ for a in azim:
 
 	gpr_mean = np.zeros((bins, bins, bins, 2))
 	gpr_sigma = np.zeros((bins, bins, bins, 2, 2))
+
+	quLATi_mean = np.zeros((bins, bins, bins, 2))
+	quLATi_sigma = np.zeros((bins, bins, bins, 2, 2))
 
 	for r_i, r_v in enumerate(binEdges):
 		for g_i, g_v in enumerate(binEdges):
@@ -360,40 +415,59 @@ for a in azim:
 							gpr_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
 							gpr_sigma[r_i, g_i, b_i] = np.cov(pxls, rowvar=0)
 
-	plt.subplot(321, title='Ground truth image'), plt.imshow(figTruth)
-	plt.subplot(322, title='Ground truth color histograms'),
+						pxls = np.column_stack(np.where((figEstquLATi[:, :, 0] >= r_v) & (figEstquLATi[:, :, 0] < binEdges[r_i + 1]) & \
+									(figEstquLATi[:, :, 1] >= g_v) & (figEstquLATi[:, :, 1] < binEdges[g_i + 1]) & \
+									(figEstquLATi[:, :, 2] >= b_v) & (figEstquLATi[:, :, 2] < binEdges[b_i + 1])))
+						if pxls.shape[0] == 0:
+							quLATi_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
+						else:
+							quLATi_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
+							quLATi_sigma[r_i, g_i, b_i] = np.cov(pxls, rowvar=0)
+
+	plt.subplot(421, title='Ground truth image'), plt.imshow(figTruth)
+	plt.subplot(422, title='Ground truth color histograms'),
 	plt.plot(np.sum(np.sum(true_hist, axis=1), axis=1), 'r')
 	plt.plot(np.sum(np.sum(true_hist, axis=0), axis=1), 'g')
 	plt.plot(np.sum(np.sum(true_hist, axis=0), axis=0), 'b')
 	plt.xlim([0,bins])
-	plt.subplot(323, title='MAGIC-LAT image'), plt.imshow(figEst)
-	plt.subplot(324, title='MAGIC-LAT color histograms'),
+	plt.subplot(423, title='MAGIC-LAT image'), plt.imshow(figEst)
+	plt.subplot(424, title='MAGIC-LAT color histograms'),
 	plt.plot(np.sum(np.sum(magic_hist, axis=1), axis=1), 'r')
 	plt.plot(np.sum(np.sum(magic_hist, axis=0), axis=1), 'g')
 	plt.plot(np.sum(np.sum(magic_hist, axis=0), axis=0), 'b')
 	plt.xlim([0,bins])
-	plt.subplot(325, title='GPR image'), plt.imshow(figEstGPR)
-	plt.subplot(326, title='GPR color histograms'),
+	plt.subplot(425, title='GPR image'), plt.imshow(figEstGPR)
+	plt.subplot(426, title='GPR color histograms'),
 	plt.plot(np.sum(np.sum(gpr_hist, axis=1), axis=1), 'r')
 	plt.plot(np.sum(np.sum(gpr_hist, axis=0), axis=1), 'g')
 	plt.plot(np.sum(np.sum(gpr_hist, axis=0), axis=0), 'b')
+	plt.xlim([0,bins])
+	plt.subplot(427, title='quLATi image'), plt.imshow(figEstquLATi)
+	plt.subplot(428, title='quLATi color histograms'),
+	plt.plot(np.sum(np.sum(quLATi_hist, axis=1), axis=1), 'r')
+	plt.plot(np.sum(np.sum(quLATi_hist, axis=0), axis=1), 'g')
+	plt.plot(np.sum(np.sum(quLATi_hist, axis=0), axis=0), 'b')
 	plt.xlim([0,bins])
 
 	plt.tight_layout()
 	plt.savefig(os.path.join(outDir, 'colorHist{:g}.png'.format(a)))
 	# plt.show()
 
-	plt.subplot(321, title='Ground truth image'), plt.imshow(figTruth)
-	plt.subplot(322, title='Ground truth flattened histogram'),
+	plt.subplot(421, title='Ground truth image'), plt.imshow(figTruth)
+	plt.subplot(422, title='Ground truth flattened histogram'),
 	plt.plot(true_hist_flat)
 	plt.xlim([0,true_hist_flat.shape[0]])
-	plt.subplot(323, title='MAGIC-LAT image'), plt.imshow(figEst)
-	plt.subplot(324, title='MAGIC-LAT flattened histogram'),
+	plt.subplot(423, title='MAGIC-LAT image'), plt.imshow(figEst)
+	plt.subplot(424, title='MAGIC-LAT flattened histogram'),
 	plt.plot(magic_hist_flat)
 	plt.xlim([0,true_hist_flat.shape[0]])
-	plt.subplot(325, title='GPR image'), plt.imshow(figEstGPR)
-	plt.subplot(326, title='GPR flattened histogram'),
+	plt.subplot(425, title='GPR image'), plt.imshow(figEstGPR)
+	plt.subplot(426, title='GPR flattened histogram'),
 	plt.plot(gpr_hist_flat)
+	plt.xlim([0,true_hist_flat.shape[0]])
+	plt.subplot(427, title='quLATi image'), plt.imshow(figEstquLATi)
+	plt.subplot(428, title='quLATi flattened histogram'),
+	plt.plot(quLATi_hist_flat)
 	plt.xlim([0,true_hist_flat.shape[0]])
 
 	plt.tight_layout()
@@ -402,16 +476,16 @@ for a in azim:
 
 	magic_corr.append(cv2.compareHist(true_hist_flat, magic_hist_flat, cv2.HISTCMP_CORREL))
 	gpr_corr.append(cv2.compareHist(true_hist_flat, gpr_hist_flat, cv2.HISTCMP_CORREL))
-
-	magic_chi.append(cv2.compareHist(true_hist_flat, magic_hist_flat, cv2.HISTCMP_CHISQR_ALT))
-	gpr_chi.append(cv2.compareHist(true_hist_flat, gpr_hist_flat, cv2.HISTCMP_CHISQR_ALT))
+	quLATi_corr.append(cv2.compareHist(true_hist_flat, quLATi_hist_flat, cv2.HISTCMP_CORREL))
 
 	true_hist = cv2.normalize(true_hist, true_hist)
 	magic_hist = cv2.normalize(magic_hist, magic_hist)
 	gpr_hist = cv2.normalize(gpr_hist, gpr_hist)
+	quLATi_hist = cv2.normalize(quLATi_hist, quLATi_hist)
 
 	magic_similarity = 0
 	gpr_similarity = 0
+	quLATi_similarity = 0
 
 	for i in range(bins):
 		for j in range(bins):
@@ -428,6 +502,12 @@ for a in azim:
 				denom = math.sqrt(np.sum((true_hist - np.mean(true_hist)) ** 2) * np.sum((gpr_hist - np.mean(gpr_hist)) ** 2))
 				gpr_similarity += (num / denom) * math.exp(-1 * gpr_js)
 
+				quLATi_js = js(true_mean[i,j,k], quLATi_mean[i,j,k], true_sigma[i,j,k], quLATi_sigma[i,j,k], true_hist[i,j,k], quLATi_hist[i,j,k])
+
+				num = (true_hist[i,j,k] - np.mean(true_hist)) * (quLATi_hist[i,j,k] - np.mean(quLATi_hist))
+				denom = math.sqrt(np.sum((true_hist - np.mean(true_hist)) ** 2) * np.sum((quLATi_hist - np.mean(quLATi_hist)) ** 2))
+				quLATi_similarity += (num / denom) * math.exp(-1 * quLATi_js)
+
 				# Intersection of histograms
 				# magic_similarity += min(true_hist[i, j, k], magic_hist[i, j, k])*math.exp(-1 * magic_js[i, j, k])
 				# gpr_similarity += min(true_hist[i, j, k], gpr_hist[i, j, k])*math.exp(-1 * gpr_js[i, j, k])
@@ -435,16 +515,16 @@ for a in azim:
 	# print('{:<20.6f}{:<20.6f}\n'.format(magic_similarity, gpr_similarity))
 	magic_spatio_corr.append(magic_similarity)
 	gpr_spatio_corr.append(gpr_similarity)
+	quLATi_spatio_corr.append(quLATi_similarity)
 
 
 with open(os.path.join(outDir, 'metrics_ex.txt'), 'w') as fid:
-	fid.write('{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR'))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseGPR))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeGPR))
+	fid.write('{:<20}{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR', 'quLATi'))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseGPR, nmsequLATi))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeGPR, maequLATi))
 
 	fid.write('\nColor-Based\n')
-	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('Histogram Corr.', np.mean(magic_corr), np.mean(gpr_corr)))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('Histogram Chi', np.mean(magic_chi), np.mean(gpr_chi)))
-
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Histogram Corr.', np.mean(magic_corr), np.mean(gpr_corr), np.mean(quLATi_corr)))
+	
 	fid.write('\n')
-	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('Spatiogram Corr.', np.mean(magic_spatio_corr), np.mean(gpr_spatio_corr)))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Spatiogram Corr.', np.mean(magic_spatio_corr), np.mean(gpr_spatio_corr), np.mean(quLATi_spatio_corr)))
