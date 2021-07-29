@@ -34,7 +34,18 @@ from magicLAT import *
 
 from qulati import gpmi, eigensolver
 
-
+def getPSNR(I1, I2):
+    s1 = cv2.absdiff(I1, I2) #|I1 - I2|
+    s1 = np.float32(s1)     # cannot make a square on 8 bits
+    s1 = s1 * s1            # |I1 - I2|^2
+    sse = s1.sum()          # sum elements per channel
+    if sse <= 1e-10:        # sum channels
+        return 0            # for small values return zero
+    else:
+        shape = I1.shape
+        mse = 1.0 * sse / (shape[0] * shape[1] * shape[2])
+        psnr = 10.0 * np.log10((255 * 255) / mse)
+        return psnr
 
 """
 p033 = 9
@@ -42,7 +53,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		9
+PATIENT_MAP				=		21
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -138,11 +149,25 @@ if not os.path.isdir(outDir):
 
 """
 Solve the eigenproblem
-""" 
-
-Q, V, gradV, centroids = eigensolver(vertices, np.array(faces), holes = 0, layers = 10, num = 256)
+"""
+QFile = 'Q_p{}.npy'.format(patient)
+VFile = 'V_p{}.npy'.format(patient)
+gradVFile = 'gradV_p{}.npy'.format(patient)
 
 # model with reduced rank efficiency
+if not os.path.isfile(QFile):
+	Q, V, gradV, centroids = eigensolver(vertices, np.array(faces), holes = 0, layers = 10, num = 256)
+	with open(QFile, 'wb') as fid:
+		np.save(fid, Q)
+	with open(VFile, 'wb') as fid:
+		np.save(fid, V)
+	with open(gradVFile, 'wb') as fid:
+		np.save(fid, gradV)
+else:
+	Q = np.load(QFile, allow_pickle = True)
+	V = np.load(VFile, allow_pickle = True)
+	gradV = np.load(gradVFile, allow_pickle = True)
+
 model = gpmi.Matern(vertices, np.array(faces), Q, V, gradV, JAX = False)
 
 sampLst = [i for i in range(M)]
@@ -197,9 +222,15 @@ latEstquLATi = pred_mean[0:vertices.shape[0]]
 MINLAT = math.floor(min(allLatVal)/10)*10
 MAXLAT = math.ceil(max(allLatVal)/10)*10
 
+# for patient 034
+# elev = 0
+# azimuth = 120
+# roll = -45
+
+# for patient 035
 elev = 0
-azimuth = 120
-roll = -45
+azimuth = 0
+roll = 0
 
 verPoints = Points(latCoords, r=10).cmap('rainbow_r', latVals, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
 
@@ -218,7 +249,9 @@ vplt.show(mesh, trainPoints, 'training points', at=1)
 # Plot 2: MAGIC-LAT output signal
 magicPoints = Points(vertices, r=10).cmap('rainbow_r', latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
 
-vplt.show(mesh, magicPoints, 'interpolation result', title='MAGIC-LAT', at=2, interactive=True)
+# mesh.interpolateDataFrom(magicPoints, N=1).cmap('rainbow_r').addScalarBar()
+
+vplt.show(mesh, magicPoints, verPoints, 'interpolation result', title='MAGIC-LAT', at=2, interactive=True)
 vplt.screenshot(filename=os.path.join(outDir, 'magic.png'), returnNumpy=False)
 vplt.close()
 
@@ -235,7 +268,9 @@ vplt.show(mesh, trainPoints, 'training points', at=1)
 # Plot 2: GPR output signal
 gprPoints = Points(vertices, r=10).cmap('rainbow_r', latEstGPR, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
 
-vplt.show(mesh, gprPoints, 'interpolation result', title='GPR', at=2, interactive=True)
+# mesh.interpolateDataFrom(gprPoints, N=1).cmap('rainbow_r').addScalarBar()
+
+vplt.show(mesh, gprPoints, verPoints, 'interpolation result', title='GPR', at=2, interactive=True)
 vplt.screenshot(filename=os.path.join(outDir, 'gpr.png'), returnNumpy=False)
 vplt.close()
 
@@ -251,7 +286,9 @@ vplt.show(mesh, trainPoints, 'training points', at=1)
 # Plot 2: GPR output signal
 quLATiPoints = Points(vertices, r=10).cmap('rainbow_r', latEstquLATi, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
 
-vplt.show(mesh, quLATiPoints, 'interpolation result', title='GPR', at=2, interactive=True)
+# mesh.interpolateDataFrom(quLATiPoints, N=1).cmap('rainbow_r').addScalarBar()
+
+vplt.show(mesh, quLATiPoints, verPoints, 'interpolation result', title='GPR', at=2, interactive=True)
 vplt.screenshot(filename=os.path.join(outDir, 'quLATi.png'), returnNumpy=False)
 vplt.close()
 
@@ -337,6 +374,8 @@ binEdges = [i*256/bins for i in range(bins+1)]
 for a in azim:
 	img = cv2.imread(os.path.join(outDir, 'true{:g}.png'.format(a)), cv2.IMREAD_GRAYSCALE)
 	n_black_px = np.sum(img == 0)
+	dimX = img.shape[0]
+	dimY = img.shape[1]
 	# numpx = np.sum(img > 0)
 
 	figTruth = cv2.imread(os.path.join(outDir, 'true{:g}.png'.format(a)))
@@ -392,6 +431,7 @@ for a in azim:
 							(figTruth[:, :, 1] >= g_v) & (figTruth[:, :, 1] < binEdges[g_i + 1]) & \
 							(figTruth[:, :, 2] >= b_v) & (figTruth[:, :, 2] < binEdges[b_i + 1])))
 						if true_pxls.shape[0] == 0:
+							true_mean[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
 							true_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
 						else:
 							true_mean[r_i, g_i, b_i] = np.mean(true_pxls, axis=0)
@@ -401,6 +441,7 @@ for a in azim:
 									(figEst[:, :, 1] >= g_v) & (figEst[:, :, 1] < binEdges[g_i + 1]) & \
 									(figEst[:, :, 2] >= b_v) & (figEst[:, :, 2] < binEdges[b_i + 1])))
 						if pxls.shape[0] == 0:
+							magic_mean[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
 							magic_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
 						else:
 							magic_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
@@ -410,6 +451,7 @@ for a in azim:
 									(figEstGPR[:, :, 1] >= g_v) & (figEstGPR[:, :, 1] < binEdges[g_i + 1]) & \
 									(figEstGPR[:, :, 2] >= b_v) & (figEstGPR[:, :, 2] < binEdges[b_i + 1])))
 						if pxls.shape[0] == 0:
+							gpr_mean[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
 							gpr_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
 						else:
 							gpr_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
@@ -419,6 +461,7 @@ for a in azim:
 									(figEstquLATi[:, :, 1] >= g_v) & (figEstquLATi[:, :, 1] < binEdges[g_i + 1]) & \
 									(figEstquLATi[:, :, 2] >= b_v) & (figEstquLATi[:, :, 2] < binEdges[b_i + 1])))
 						if pxls.shape[0] == 0:
+							quLATi_mean[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
 							quLATi_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
 						else:
 							quLATi_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
@@ -478,6 +521,10 @@ for a in azim:
 	gpr_corr.append(cv2.compareHist(true_hist_flat, gpr_hist_flat, cv2.HISTCMP_CORREL))
 	quLATi_corr.append(cv2.compareHist(true_hist_flat, quLATi_hist_flat, cv2.HISTCMP_CORREL))
 
+	# magic_corr.append(getPSNR(figTruth, figEst))
+	# gpr_corr.append(getPSNR(figTruth, figEstGPR))
+	# quLATi_corr.append(getPSNR(figTruth, figEstquLATi))
+
 	true_hist = cv2.normalize(true_hist, true_hist)
 	magic_hist = cv2.normalize(magic_hist, magic_hist)
 	gpr_hist = cv2.normalize(gpr_hist, gpr_hist)
@@ -490,27 +537,28 @@ for a in azim:
 	for i in range(bins):
 		for j in range(bins):
 			for k in range(bins):
-				magic_js = js(true_mean[i,j,k], magic_mean[i,j,k], true_sigma[i,j,k], magic_sigma[i,j,k], true_hist[i,j,k], magic_hist[i,j,k])
-				
-				num = (true_hist[i,j,k] - np.mean(true_hist)) * (magic_hist[i,j,k] - np.mean(magic_hist))
-				denom = math.sqrt(np.sum((true_hist - np.mean(true_hist)) ** 2) * np.sum((magic_hist - np.mean(magic_hist)) ** 2))
-				magic_similarity += (num / denom) * math.exp(-1 * magic_js)
+				if true_hist[i,j,k] > 0 or magic_hist[i,j,k] > 0 or gpr_hist[i,j,k] > 0:
+					magic_js = js(true_mean[i,j,k], magic_mean[i,j,k], true_sigma[i,j,k], magic_sigma[i,j,k], true_hist[i,j,k], magic_hist[i,j,k])
+					gpr_js = js(true_mean[i,j,k], gpr_mean[i,j,k], true_sigma[i,j,k], gpr_sigma[i,j,k], true_hist[i,j,k], gpr_hist[i,j,k])
+					quLATi_js = js(true_mean[i,j,k], quLATi_mean[i,j,k], true_sigma[i,j,k], quLATi_sigma[i,j,k], true_hist[i,j,k], quLATi_hist[i,j,k])
+					
+					# Histogram correlation
+					num = true_hist[i,j,k] * magic_hist[i,j,k]
+					denom = math.sqrt(np.sum(true_hist ** 2) * np.sum(magic_hist ** 2))
+					magic_similarity += (num / denom) * math.exp(-1 * magic_js)
 
-				gpr_js = js(true_mean[i,j,k], gpr_mean[i,j,k], true_sigma[i,j,k], gpr_sigma[i,j,k], true_hist[i,j,k], gpr_hist[i,j,k])
+					num = true_hist[i,j,k] * gpr_hist[i,j,k]
+					denom = math.sqrt(np.sum(true_hist ** 2) * np.sum(gpr_hist ** 2))
+					gpr_similarity += (num / denom) * math.exp(-1 * gpr_js)
 
-				num = (true_hist[i,j,k] - np.mean(true_hist)) * (gpr_hist[i,j,k] - np.mean(gpr_hist))
-				denom = math.sqrt(np.sum((true_hist - np.mean(true_hist)) ** 2) * np.sum((gpr_hist - np.mean(gpr_hist)) ** 2))
-				gpr_similarity += (num / denom) * math.exp(-1 * gpr_js)
+					num = true_hist[i,j,k] * quLATi_hist[i,j,k]
+					denom = math.sqrt(np.sum(true_hist ** 2) * np.sum(quLATi_hist ** 2))
+					quLATi_similarity += (num / denom) * math.exp(-1 * quLATi_js)
 
-				quLATi_js = js(true_mean[i,j,k], quLATi_mean[i,j,k], true_sigma[i,j,k], quLATi_sigma[i,j,k], true_hist[i,j,k], quLATi_hist[i,j,k])
-
-				num = (true_hist[i,j,k] - np.mean(true_hist)) * (quLATi_hist[i,j,k] - np.mean(quLATi_hist))
-				denom = math.sqrt(np.sum((true_hist - np.mean(true_hist)) ** 2) * np.sum((quLATi_hist - np.mean(quLATi_hist)) ** 2))
-				quLATi_similarity += (num / denom) * math.exp(-1 * quLATi_js)
-
-				# Intersection of histograms
-				# magic_similarity += min(true_hist[i, j, k], magic_hist[i, j, k])*math.exp(-1 * magic_js[i, j, k])
-				# gpr_similarity += min(true_hist[i, j, k], gpr_hist[i, j, k])*math.exp(-1 * gpr_js[i, j, k])
+					# # Intersection of histograms
+					# magic_similarity += min(true_hist[i, j, k], magic_hist[i, j, k])*math.exp(-1 * magic_js)
+					# gpr_similarity += min(true_hist[i, j, k], gpr_hist[i, j, k])*math.exp(-1 * gpr_js)
+					# quLATi_similarity += min(true_hist[i, j, k], quLATi_hist[i, j, k])*math.exp(-1 * quLATi_js)
 
 	# print('{:<20.6f}{:<20.6f}\n'.format(magic_similarity, gpr_similarity))
 	magic_spatio_corr.append(magic_similarity)
