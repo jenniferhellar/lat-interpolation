@@ -25,8 +25,6 @@ from utils import *
 from const import *
 from magicLAT import *
 
-from qulati import gpmi, eigensolver
-
 from quLATiHelper import *
 
 
@@ -36,7 +34,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		21
+PATIENT_MAP				=		9
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -174,10 +172,8 @@ plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstquLATi,
 	outDir, title='quLATi', filename='quLATi.png')
 
 # mesh.interpolateDataFrom(pts, N=1).cmap('rainbow_r').addScalarBar()
-elev = 0
-azim = [-60, 30, 120, 210]
-roll = -45
-createTestPointImages(vertices, faces, azim, elev, roll, MINLAT, MAXLAT, outDir, 
+
+createTestPointImages(vertices, faces, MINLAT, MAXLAT, outDir, 
 	TstCoord, TstVal, latEst[TstIdx], latEstGPR[TstIdx], latEstquLATi[TstIdx])
 
 
@@ -208,12 +204,16 @@ quLATi_corr = []
 bins = 16
 binEdges = [i*256/bins for i in range(bins+1)]
 
-for a in azim:
+elev = 0
+azim = [0, 90, 180, 270]
 
-	magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true{:g}.png'.format(a),
-		'magic{:g}.png'.format(a), 'gpr{:g}.png'.format(a), 'quLATi{:g}.png'.format(a),
+for a in azim:
+	magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true_elev{:g}azim{:g}.png'.format(elev, a),
+		'magic_elev{:g}azim{:g}.png'.format(elev, a),
+		'gpr_elev{:g}azim{:g}.png'.format(elev, a),
+		'quLATi_elev{:g}azim{:g}.png'.format(elev, a),
 		bins, binEdges,
-		'{:g}.png'.format(a))
+		'{:g}azim{:g}.png'.format(elev, a))
 
 	magic_corr.append(magic_cor)
 	gpr_corr.append(gpr_cor)
@@ -223,6 +223,24 @@ for a in azim:
 	gpr_spatio_corr.append(gpr_scorr)
 	quLATi_spatio_corr.append(quLATi_scorr)
 
+elev = [-90, 90]
+azim = 0
+
+for e in elev:
+	magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true_elev{:g}azim{:g}.png'.format(e, azim),
+		'magic_elev{:g}azim{:g}.png'.format(e, azim),
+		'gpr_elev{:g}azim{:g}.png'.format(e, azim),
+		'quLATi_elev{:g}azim{:g}.png'.format(e, azim),
+		bins, binEdges,
+		'{:g}azim{:g}.png'.format(e, azim))
+
+	magic_corr.append(magic_cor)
+	gpr_corr.append(gpr_cor)
+	quLATi_corr.append(quLATi_cor)
+
+	magic_spatio_corr.append(magic_scorr)
+	gpr_spatio_corr.append(gpr_scorr)
+	quLATi_spatio_corr.append(quLATi_scorr)
 
 with open(os.path.join(outDir, 'metrics.txt'), 'w') as fid:
 	fid.write('{:<20}{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR', 'quLATi'))

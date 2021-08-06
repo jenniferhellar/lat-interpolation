@@ -229,7 +229,7 @@ def colorHistAndSpatioCorr(outDir, trueImageFile,
 
 
 
-def createTestPointImages(vertices, faces, azim, elev, roll, MINLAT, MAXLAT, outDir,
+def createTestPointImages(vertices, faces, MINLAT, MAXLAT, outDir,
 	coords, trueVals, magicVals, gprVals=[], quLATiVals=[]):
 
 	mesh = Mesh([vertices, faces], c='black')
@@ -238,44 +238,52 @@ def createTestPointImages(vertices, faces, azim, elev, roll, MINLAT, MAXLAT, out
 	Ground truth (test points only)
 	"""
 	plotSaveTestPoints(mesh, coords, trueVals,
-		azim, elev, roll, MINLAT, MAXLAT,
-		outDir, fileprefix='true')
+		MINLAT, MAXLAT, outDir, fileprefix='true')
 
 	"""
 	MAGIC-LAT estimate (test points only)
 	"""
 	plotSaveTestPoints(mesh, coords, magicVals,
-		azim, elev, roll, MINLAT, MAXLAT,
-		outDir, fileprefix='magic')
+		MINLAT, MAXLAT, outDir, fileprefix='magic')
 
 	"""
 	GPR estimate (test points only)
 	"""
 	if len(gprVals) > 0:
 		plotSaveTestPoints(mesh, coords, gprVals,
-			azim, elev, roll, MINLAT, MAXLAT,
-			outDir, fileprefix='gpr')
+			MINLAT, MAXLAT, outDir, fileprefix='gpr')
 
 	"""
 	quLATi estimate (test points only)
 	"""
 	if len(quLATiVals) > 0:
 		plotSaveTestPoints(mesh, coords, quLATiVals,
-			azim, elev, roll, MINLAT, MAXLAT,
-			outDir, fileprefix='quLATi')
+			MINLAT, MAXLAT, outDir, fileprefix='quLATi')
 
 
 def plotSaveTestPoints(mesh, TstCoord, TstVal,
-	azim, elev, roll, MINLAT, MAXLAT,
-	outDir, fileprefix):
+	MINLAT, MAXLAT, outDir, fileprefix):
 
-	vplt = Plotter(N=1, axes=0, offscreen=True)
+	# vplt = Plotter(N=1, axes=0, offscreen=True)
 	testPoints = Points(TstCoord, r=20).cmap('rainbow_r', TstVal, vmin=MINLAT, vmax=MAXLAT)
-	for a in azim:
-		vplt.show(mesh, testPoints, azimuth=a, elevation=elev, roll=roll, bg='black')
-		vplt.screenshot(filename=os.path.join(outDir, fileprefix+'{:g}.png'.format(a)), returnNumpy=False)
 
-	vplt.close()
+	elev = 0
+	roll = 0
+	azim = [0, 90, 180, 270]
+	for a in azim:
+		vplt = Plotter(N=1, axes=0, offscreen=True)
+		vplt.show(mesh, testPoints, azimuth=a, elevation=elev, roll=roll, bg='black')
+		vplt.screenshot(filename=os.path.join(outDir, fileprefix+'_elev{:g}azim{:g}.png'.format(elev, a)), returnNumpy=False)
+		vplt.close()
+
+	elev = [-90, 90]
+	roll = 0
+	azim = 0
+	for e in elev:
+		vplt = Plotter(N=1, axes=0, offscreen=True)
+		vplt.show(mesh, testPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
+		vplt.screenshot(filename=os.path.join(outDir, fileprefix+'_elev{:g}azim{:g}.png'.format(e, azim)), returnNumpy=False)
+		vplt.close()
 
 
 def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst, 

@@ -10,7 +10,7 @@ from const import *
 
 PATIENT_MAP         =           21
 
-outDir              =           'raw_samples'
+outDir              =           'results_plotting'
 
 meshFile = meshNames[PATIENT_MAP]
 latFile = latNames[PATIENT_MAP]
@@ -45,3 +45,55 @@ show(mesh, origLatPoints, __doc__, axes=9).close()
 show(mesh, latPoints, __doc__, axes=9).close()
 
 # show(mesh, __doc__, axes=9).close()
+
+
+""" Testing various perspectives """
+
+# vplt = Plotter(N=1, axes=0, offscreen=True)
+# elev = 0
+# roll = 0
+# azim = [0, 90, 180, 270]
+# for a in azim:
+# 	vplt.show(mesh, latPoints, azimuth=a, elevation=elev, roll=roll, bg='black')
+# 	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(elev, a)), returnNumpy=False)
+# elev = [-90, 90]
+# roll = 0
+# azim = 0
+# for e in elev:
+# 	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
+# 	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
+# vplt.close()
+
+# elev = [-90, 90]
+# roll = 0
+# azim = 0
+# for e in elev:
+# 	vplt = Plotter(N=1, axes=0, offscreen=True)
+# 	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
+# 	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
+# 	vplt.close()
+
+
+""" Old """
+
+# # plotting packages
+# import matplotlib.pyplot as plt
+# import matplotlib.tri as mtri
+
+# triang = mtri.Triangulation(vertices[:,0], vertices[:,1], triangles=faces)
+
+# fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(16, 8), subplot_kw=dict(projection="3d"))
+
+# ax.plot_trisurf(triang, vertices[:,2], color='grey', alpha=0.2)
+# # ax.plot_trisurf(triang, coordinateMatrix[:,2], color='grey')
+# allLatVerts = np.array(allLatVerts)
+# pos = ax.scatter(allLatVerts[:,0], allLatVerts[:,1], allLatVerts[:,2], c=allLatVals, cmap='rainbow_r', vmin=np.min(allLatVals), vmax=np.max(allLatVals), s = 20)
+
+# ax.set_title('LAT Signal (True)')
+# ax.set_xlabel('X', fontweight ='bold') 
+# ax.set_ylabel('Y', fontweight ='bold') 
+# ax.set_zlabel('Z', fontweight ='bold')
+# cax = fig.add_axes([ax.get_position().x0+0.015,ax.get_position().y0-0.05,ax.get_position().width,0.01])
+# plt.colorbar(pos, cax=cax, label='LAT (ms)', orientation="horizontal")
+
+# plt.show()
