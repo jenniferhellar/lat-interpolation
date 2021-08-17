@@ -463,21 +463,13 @@ def mapSamps(IDX, COORD, coords, vals):
 
 
 
-def calcMSE(sig, sigEst, multichannel=False):
-	if multichannel:
-		n = sig.shape[1]	# summing across the number of bins
-		diffsq = (np.array(sigEst) - np.array(sig)) ** 2
-		d = np.sum(diffsq[:, :, 1:], axis=2)	# (x' - x)^2 + (y' - y)^2 = d^2 (pixel distance)
-		mean_err = np.sum(d, axis=1, keepdims=True)
-		hist_err = np.sum(diffsq[:,:,0], axis=1, keepdims=True)
-		return (1/n * hist_err, 1/n * mean_err)
-	else:
-		n = len(sig)
+def calcMSE(sig, sigEst):
+	n = len(sig)
 
-		err = [abs(sigEst[i] - sig[i]) for i in range(n)]
-		err = np.array(err)
+	err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+	err = np.array(err)
 
-		mse = 1/n*np.sum(err ** 2)
+	mse = 1/n*np.sum(err ** 2)
 
 	return mse
 
@@ -561,78 +553,6 @@ def compute_metrics(sig, sigEst):
 	return nmse, snr, mae, nrmse
 
 
-
-def plotTrainTestVertices(coordinateMatrix, connectivityMatrix, lat, latTrI, latTstI, nm):
-	TrainVerCoord = {}
-	TrainVerLAT = {}
-	for i in latTrI:
-		TrainVerCoord[i] = lat[i]['coord']
-		TrainVerLAT[i] = lat[i]['val']
-
-	TestVerCoord = {}
-	TestVerLAT = {}
-	for i in latTstI:
-		TestVerCoord[i] = lat[i]['coord']
-		TestVerLAT[i] = lat[i]['val']
-
-	TrainCoordList = np.array(list(TrainVerCoord.values()))
-	TestCoordList = np.array(list(TestVerCoord.values()))
-
-	fig, ax = plt.subplots(figsize=(16, 8), subplot_kw=dict(projection="3d"))
-
-	triang = mtri.Triangulation(coordinateMatrix[:,0], coordinateMatrix[:,1], triangles=connectivityMatrix)
-	ax.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-	ax.scatter(TrainCoordList[:,0], TrainCoordList[:,1], TrainCoordList[:,2], c='blue', s = 20)
-	ax.scatter(TestCoordList[:,0], TestCoordList[:,1], TestCoordList[:,2], c='red', s = 20)
-	ax.set_title(nm)
-
-	plt.show()
-
-
-def plotTrainTestResult(coordinateMatrix, connectivityMatrix, lat, latVer, latVals, latTrI, latTstI, yhat):
-	TrainVerCoord = {}
-	TrainVerLAT = {}
-	for i in latTrI:
-		TrainVerCoord[i] = lat[i]['coord']
-		TrainVerLAT[i] = lat[i]['val']
-
-	TestVerCoord = {}
-	TestVerLAT = {}
-	for i in latTstI:
-		TestVerCoord[i] = lat[i]['coord']
-		TestVerLAT[i] = yhat[i]
-
-	TrainCoordList = np.array(list(TrainVerCoord.values()))
-	TestCoordList = np.array(list(TestVerCoord.values()))
-
-	TrainValList = np.array(list(TrainVerLAT.values()))
-	TestValList = np.array(list(TestVerLAT.values()))
-
-	fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(16, 8), subplot_kw=dict(projection="3d"))
-	axes = ax.flatten()
-
-	triang = mtri.Triangulation(coordinateMatrix[:,0], coordinateMatrix[:,1], triangles=connectivityMatrix)
-
-	thisAx = axes[0]
-	thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-	pos = thisAx.scatter(latVer[:,0], latVer[:,1], latVer[:,2], c=latVals, cmap='rainbow_r', s = 10)
-	thisAx.set_title('Ground truth')
-
-	thisAx = axes[1]
-	thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-	pos = thisAx.scatter(TrainCoordList[:,0], TrainCoordList[:,1], TrainCoordList[:,2], c=TrainValList, cmap='rainbow_r', s = 10)
-	thisAx.set_title('Given (y)')
-
-	thisAx = axes[2]
-	thisAx.plot_trisurf(triang, coordinateMatrix[:,2], color='grey', alpha=0.2)
-	pos = thisAx.scatter(TestCoordList[:,0], TestCoordList[:,1], TestCoordList[:,2], c=TestValList, cmap='rainbow_r', s = 10)
-	thisAx.set_title('Test Output')
-	cax = fig.add_axes([thisAx.get_position().x1+0.03,thisAx.get_position().y0,0.01,thisAx.get_position().height])
-	plt.colorbar(pos, cax=cax) # Similar to fig.colorbar(im, cax = cax)
-
-	plt.show()
-
-
 def pltEigenvalues(lambdas):
 	N = len(lambdas)
 	plt.scatter(range(0, N), lambdas)
@@ -640,116 +560,3 @@ def pltEigenvalues(lambdas):
 	plt.ylabel('Eigenvalue')
 	plt.title('Graph Laplacian Eigenvalues')
 	plt.show()
-
-
-def getAdjMatrixCotan(coordinateMatrix, edges, triangles):
-	N = len(coordinateMatrix)
-	A = np.zeros((N, N))
-
-	for i in range(len(edges)):
-
-		e = edges[i]
-		adj_tri = triangles[i]
-
-		w_ij = 0
-
-		for tri in adj_tri:
-			idx0 = int(tri[0])
-			idx1 = int(tri[1])
-			idx2 = int(tri[2])
-
-			pt0 = coordinateMatrix[idx0, :]
-			pt1 = coordinateMatrix[idx1, :]
-			pt2 = coordinateMatrix[idx2, :]
-
-			l_a = norm(pt1 - pt0)
-			l_b = norm(pt2 - pt0)
-			l_c = norm(pt2 - pt1)
-
-			s = (l_a + l_b + l_c)/2
-
-			a = math.sqrt(s*(s-l_a)*(s-l_b)*(s-l_c))
-
-			if set([idx0, idx1]) == e:
-				w_ij = w_ij + (-l_a**2 + l_b**2 + l_c**2)/(8*a)
-			elif set([idx1, idx2]) == e:
-				w_ij = w_ij + (l_a**2 + l_b**2 - l_c**2)/(8*a)
-			elif set([idx0, idx2]) == e:
-				w_ij = w_ij + (l_a**2 - l_b**2 + l_c**2)/(8*a)
-			else:
-				print('unable to identify edge')
-				exit()
-
-		e = list(e)
-		v_i = e[0]
-		v_j = e[1]
-
-		A[v_i, v_j] = w_ij
-		A[v_j, v_i] = w_ij
-
-	return A
-
-
-def getAdjMatrixExp(coordinateMatrix, edges, triangles):
-	N = len(coordinateMatrix)
-	A = np.zeros((N, N))
-
-	d = 0
-	cnt = 0
-	for i in range(len(coordinateMatrix)):
-		[x1, y1, z1] = coordinateMatrix[i, :]
-		for j in range(len(coordinateMatrix)):
-			[x2, y2, z2] = coordinateMatrix[j, :]
-			d += math.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
-			cnt += 1
-	d = d/cnt
-
-	# d = 0
-	# for i in range(len(edges)):
-	# 	e = edges[i]
-
-	# 	e = list(e)
-	# 	v_i = e[0]
-	# 	v_j = e[1]
-
-	# 	[x1, y1, z1] = coordinateMatrix[v_i, :]
-	# 	[x2, y2, z2] = coordinateMatrix[v_j, :]
-
-	# 	d += math.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
-	# d = d/len(edges)
-
-	for i in range(len(edges)):
-
-		e = edges[i]
-
-		e = list(e)
-		v_i = e[0]
-		v_j = e[1]
-
-		[x1, y1, z1] = coordinateMatrix[v_i, :]
-		[x2, y2, z2] = coordinateMatrix[v_j, :]
-
-		# w_ij = 1/math.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
-		d2_ij = (x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2
-		w_ij = math.exp(-d2_ij/d**2)
-
-		A[v_i, v_j] = w_ij
-		A[v_j, v_i] = w_ij
-
-	return A
-
-
-def pltAdjMatrix(A, first, numV, title):
-
-	end = first + numV + 1;
-
-	fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(16, 8))
-	pos = ax.imshow(A[first:end, first:end], cmap='Blues', interpolation=None)
-	plt.xticks(np.arange(first, end, step=1))
-	plt.yticks(np.arange(first, end, step=1))
-	plt.title(title + '\nVertices ' + str(first) + ' - ' + str(end-1))
-	# plt.colorbar(hm)
-	# cax = fig.add_axes([ax.get_position().x0,ax.get_position().y0-0.1,ax.get_position().width,0.01])
-	cax = fig.add_axes([ax.get_position().x1+0.03,ax.get_position().y0,0.01,ax.get_position().height])
-	plt.colorbar(pos, cax=cax, label='weight')
-	# plt.show()

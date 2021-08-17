@@ -45,7 +45,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		14
+PATIENT_MAP				=		18
 
 NUM_TEST_REPEATS 		= 		50
 NUM_TRAIN_SAMPS 		= 		100
@@ -174,7 +174,7 @@ for a_idx in range(len(alphas)):
 
 
 			""" MAGIC-LAT estimate """
-			latEst = magicLAT(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD, alpha, beta)
+			latEst = magicLATcotan(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD, alpha, beta)
 
 
 			""" Error metrics """

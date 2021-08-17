@@ -125,6 +125,7 @@ TstVal = [mapLAT[i] for i in TstIdx]
 
 """ MAGIC-LAT estimate """
 latEst = magicLAT(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
+latEstcotan = magicLATcotan(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
 
 
 """ GPR estimate """
@@ -173,8 +174,12 @@ plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstquLATi,
 
 # mesh.interpolateDataFrom(pts, N=1).cmap('rainbow_r').addScalarBar()
 
-# createTestPointImages(vertices, faces, MINLAT, MAXLAT, outDir, 
-# 	TstCoord, TstVal, latEst[TstIdx], latEstGPR[TstIdx], latEstquLATi[TstIdx])
+"""
+Figure 2: Ground truth (entire), training points, and quLATi (entire)
+"""
+plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstcotan, 
+	azimuth, elev, roll, MINLAT, MAXLAT,
+	outDir, title='MAGIC-LAT (cotan)', filename='magic_cotan.png')
 
 
 """
@@ -185,70 +190,27 @@ nmse = calcNMSE(TstVal, latEst[TstIdx])
 nmseGPR = calcNMSE(TstVal, latEstGPR[TstIdx])
 nmsequLATi = calcNMSE(TstVal, latEstquLATi[TstIdx])
 
+nmseCotan = calcNMSE(TstVal, latEstcotan[TstIdx])
+
 mae = calcMAE(TstVal, latEst[TstIdx])
 maeGPR = calcMAE(TstVal, latEstGPR[TstIdx])
 maequLATi = calcMAE(TstVal, latEstquLATi[TstIdx])
+
+maeCotan = calcMAE(TstVal, latEstcotan[TstIdx])
 
 dE1976, dE2000 = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
 dE1976GPR, dE2000GPR = deltaE(TstVal, [latEstGPR[TstIdx]], MINLAT, MAXLAT)
 dE1976quLATi, dE2000quLATi = deltaE(TstVal, [latEstquLATi[TstIdx]], MINLAT, MAXLAT)
 
-# magic_spatio_corr = []
-# gpr_spatio_corr = []
-# quLATi_spatio_corr = []
-
-# magic_corr = []
-# gpr_corr = []
-# quLATi_corr = []
-
-# bins = 16
-# binEdges = [i*256/bins for i in range(bins+1)]
-
-# elev = 0
-# azim = [0, 90, 180, 270]
-
-# for a in azim:
-# 	magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true_elev{:g}azim{:g}.png'.format(elev, a),
-# 		'magic_elev{:g}azim{:g}.png'.format(elev, a),
-# 		'gpr_elev{:g}azim{:g}.png'.format(elev, a),
-# 		'quLATi_elev{:g}azim{:g}.png'.format(elev, a),
-# 		bins, binEdges,
-# 		'{:g}azim{:g}.png'.format(elev, a))
-
-# 	magic_corr.append(magic_cor)
-# 	gpr_corr.append(gpr_cor)
-# 	quLATi_corr.append(quLATi_cor)
-
-# 	magic_spatio_corr.append(magic_scorr)
-# 	gpr_spatio_corr.append(gpr_scorr)
-# 	quLATi_spatio_corr.append(quLATi_scorr)
-
-# elev = [-90, 90]
-# azim = 0
-
-# for e in elev:
-# 	magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true_elev{:g}azim{:g}.png'.format(e, azim),
-# 		'magic_elev{:g}azim{:g}.png'.format(e, azim),
-# 		'gpr_elev{:g}azim{:g}.png'.format(e, azim),
-# 		'quLATi_elev{:g}azim{:g}.png'.format(e, azim),
-# 		bins, binEdges,
-# 		'{:g}azim{:g}.png'.format(e, azim))
-
-# 	magic_corr.append(magic_cor)
-# 	gpr_corr.append(gpr_cor)
-# 	quLATi_corr.append(quLATi_cor)
-
-# 	magic_spatio_corr.append(magic_scorr)
-# 	gpr_spatio_corr.append(gpr_scorr)
-# 	quLATi_spatio_corr.append(quLATi_scorr)
+dE1976cotan, dE2000cotan = deltaE(TstVal, latEstcotan[TstIdx], MINLAT, MAXLAT)
 
 with open(os.path.join(outDir, 'metrics.txt'), 'w') as fid:
-	fid.write('{:<20}{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR', 'quLATi'))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseGPR, nmsequLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeGPR, maequLATi))
+	fid.write('{:<20}{:<20}{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'ML-Cotan', 'GPR', 'quLATi'))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseCotan, nmseGPR, nmsequLATi))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeCotan, maeGPR, maequLATi))
 
 	fid.write('\nColor-Based\n')
 	# fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Histogram Corr.', np.mean(magic_corr), np.mean(gpr_corr), np.mean(quLATi_corr)))
 	# fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Spatiogram Corr.', np.mean(magic_spatio_corr), np.mean(gpr_spatio_corr), np.mean(quLATi_spatio_corr)))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-1976', dE1976, dE1976GPR, dE1976quLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-2000', dE2000, dE2000GPR, dE2000quLATi))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-1976', dE1976, dE1976cotan, dE1976GPR, dE1976quLATi))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-2000', dE2000, dE2000cotan, dE2000GPR, dE2000quLATi))
