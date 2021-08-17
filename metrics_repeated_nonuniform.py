@@ -9,9 +9,6 @@ import numpy as np
 import math
 import random
 
-# plotting packages
-from vedo import *
-
 # Gaussian process regression interpolation
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
@@ -23,6 +20,7 @@ from readLAT import readLAT
 
 from utils import *
 from const import *
+from metrics import *
 from magicLAT import *
 
 from quLATiHelper import *
@@ -109,24 +107,21 @@ sampLst = getModifiedSampList(latVals)
 
 magicNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 magicMAE = [0 for i in range(NUM_TEST_REPEATS)]
-magicHistCorr = [0 for i in range(NUM_TEST_REPEATS)]
-magicSpatioCorr = [0 for i in range(NUM_TEST_REPEATS)]
-magicDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
-magicDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
+# magicHistCorr = [0 for i in range(NUM_TEST_REPEATS)]
+# magicSpatioCorr = [0 for i in range(NUM_TEST_REPEATS)]
+magicDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 gprNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 gprMAE = [0 for i in range(NUM_TEST_REPEATS)]
-gprHistCorr = [0 for i in range(NUM_TEST_REPEATS)]
-gprSpatioCorr = [0 for i in range(NUM_TEST_REPEATS)]
-gprDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
-gprDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
+# gprHistCorr = [0 for i in range(NUM_TEST_REPEATS)]
+# gprSpatioCorr = [0 for i in range(NUM_TEST_REPEATS)]
+gprDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 quLATiNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 quLATiMAE = [0 for i in range(NUM_TEST_REPEATS)]
-quLATiHistCorr = [0 for i in range(NUM_TEST_REPEATS)]
-quLATiSpatioCorr = [0 for i in range(NUM_TEST_REPEATS)]
-quLATiDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
-quLATiDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
+# quLATiHistCorr = [0 for i in range(NUM_TEST_REPEATS)]
+# quLATiSpatioCorr = [0 for i in range(NUM_TEST_REPEATS)]
+quLATiDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 # For colorbar ranges
 MINLAT = math.floor(min(allLatVal)/10)*10
@@ -173,8 +168,8 @@ for test in range(NUM_TEST_REPEATS):
 	Create images for visual metrics
 	"""
 
-	createTestPointImages(vertices, faces, MINLAT, MAXLAT, outDir, 
-	TstCoord, TstVal, latEst[TstIdx], latEstGPR[TstIdx], latEstquLATi[TstIdx])
+	# createTestPointImages(vertices, faces, MINLAT, MAXLAT, outDir, 
+	# TstCoord, TstVal, latEst[TstIdx], latEstGPR[TstIdx], latEstquLATi[TstIdx])
 
 
 	"""
@@ -189,81 +184,78 @@ for test in range(NUM_TEST_REPEATS):
 	maeGPR = calcMAE(TstVal, latEstGPR[TstIdx])
 	maequLATi = calcMAE(TstVal, latEstquLATi[TstIdx])
 
-	dE1976, dE2000 = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
-	dE1976GPR, dE2000GPR = deltaE(TstVal, [latEstGPR[TstIdx]], MINLAT, MAXLAT)
-	dE1976quLATi, dE2000quLATi = deltaE(TstVal, [latEstquLATi[TstIdx]], MINLAT, MAXLAT)
+	dE = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
+	dEGPR = deltaE(TstVal, latEstGPR[TstIdx], MINLAT, MAXLAT)
+	dEquLATi = deltaE(TstVal, latEstquLATi[TstIdx], MINLAT, MAXLAT)
 
-	magic_spatio_corr = []
-	gpr_spatio_corr = []
-	quLATi_spatio_corr = []
+	# magic_spatio_corr = []
+	# gpr_spatio_corr = []
+	# quLATi_spatio_corr = []
 
-	magic_corr = []
-	gpr_corr = []
-	quLATi_corr = []
+	# magic_corr = []
+	# gpr_corr = []
+	# quLATi_corr = []
 
-	bins = 16
-	binEdges = [i*256/bins for i in range(bins+1)]
+	# bins = 16
+	# binEdges = [i*256/bins for i in range(bins+1)]
 
-	# four sides of the object
-	elev = 0
-	azim = [0, 90, 180, 270]
+	# # four sides of the object
+	# elev = 0
+	# azim = [0, 90, 180, 270]
 
-	for a in azim:
-		magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true_elev{:g}azim{:g}.png'.format(elev, a),
-			'magic_elev{:g}azim{:g}.png'.format(elev, a),
-			'gpr_elev{:g}azim{:g}.png'.format(elev, a),
-			'quLATi_elev{:g}azim{:g}.png'.format(elev, a),
-			bins, binEdges,
-			'{:g}azim{:g}.png'.format(elev, a))
+	# for a in azim:
+	# 	magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true_elev{:g}azim{:g}.png'.format(elev, a),
+	# 		'magic_elev{:g}azim{:g}.png'.format(elev, a),
+	# 		'gpr_elev{:g}azim{:g}.png'.format(elev, a),
+	# 		'quLATi_elev{:g}azim{:g}.png'.format(elev, a),
+	# 		bins, binEdges,
+	# 		'{:g}azim{:g}.png'.format(elev, a))
 
-		magic_corr.append(magic_cor)
-		gpr_corr.append(gpr_cor)
-		quLATi_corr.append(quLATi_cor)
+	# 	magic_corr.append(magic_cor)
+	# 	gpr_corr.append(gpr_cor)
+	# 	quLATi_corr.append(quLATi_cor)
 
-		magic_spatio_corr.append(magic_scorr)
-		gpr_spatio_corr.append(gpr_scorr)
-		quLATi_spatio_corr.append(quLATi_scorr)
+	# 	magic_spatio_corr.append(magic_scorr)
+	# 	gpr_spatio_corr.append(gpr_scorr)
+	# 	quLATi_spatio_corr.append(quLATi_scorr)
 
-	# top and bottom perspective of the object
-	elev = [-90, 90]
-	azim = 0
+	# # top and bottom perspective of the object
+	# elev = [-90, 90]
+	# azim = 0
 
-	for e in elev:
-		magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true_elev{:g}azim{:g}.png'.format(e, azim),
-			'magic_elev{:g}azim{:g}.png'.format(e, azim),
-			'gpr_elev{:g}azim{:g}.png'.format(e, azim),
-			'quLATi_elev{:g}azim{:g}.png'.format(e, azim),
-			bins, binEdges,
-			'{:g}azim{:g}.png'.format(e, azim))
+	# for e in elev:
+	# 	magic_scorr, magic_cor, gpr_scorr, gpr_cor, quLATi_scorr, quLATi_cor = colorHistAndSpatioCorr(outDir, 'true_elev{:g}azim{:g}.png'.format(e, azim),
+	# 		'magic_elev{:g}azim{:g}.png'.format(e, azim),
+	# 		'gpr_elev{:g}azim{:g}.png'.format(e, azim),
+	# 		'quLATi_elev{:g}azim{:g}.png'.format(e, azim),
+	# 		bins, binEdges,
+	# 		'{:g}azim{:g}.png'.format(e, azim))
 
-		magic_corr.append(magic_cor)
-		gpr_corr.append(gpr_cor)
-		quLATi_corr.append(quLATi_cor)
+	# 	magic_corr.append(magic_cor)
+	# 	gpr_corr.append(gpr_cor)
+	# 	quLATi_corr.append(quLATi_cor)
 
-		magic_spatio_corr.append(magic_scorr)
-		gpr_spatio_corr.append(gpr_scorr)
-		quLATi_spatio_corr.append(quLATi_scorr)
+	# 	magic_spatio_corr.append(magic_scorr)
+	# 	gpr_spatio_corr.append(gpr_scorr)
+	# 	quLATi_spatio_corr.append(quLATi_scorr)
 
 	magicNMSE[test] = nmse
 	magicMAE[test] = mae
-	magicHistCorr[test] = np.mean(magic_corr)	# average the 6 perspectives
-	magicSpatioCorr[test] = np.mean(magic_spatio_corr)
-	magicDE1976[test] = dE1976
-	magicDE2000[test] = dE2000
+	# magicHistCorr[test] = np.mean(magic_corr)	# average the 6 perspectives
+	# magicSpatioCorr[test] = np.mean(magic_spatio_corr)
+	magicDE[test] = dE
 
 	gprNMSE[test] = nmseGPR
 	gprMAE[test] = maeGPR
-	gprHistCorr[test] = np.mean(gpr_corr)
-	gprSpatioCorr[test] = np.mean(gpr_spatio_corr)
-	gprDE1976[test] = dE1976GPR
-	gprDE2000[test] = dE2000GPR
+	# gprHistCorr[test] = np.mean(gpr_corr)
+	# gprSpatioCorr[test] = np.mean(gpr_spatio_corr)
+	gprDE[test] = dEGPR
 
 	quLATiNMSE[test] = nmsequLATi
 	quLATiMAE[test] = maequLATi
-	quLATiHistCorr[test] = np.mean(quLATi_corr)
-	quLATiSpatioCorr[test] = np.mean(quLATi_spatio_corr)
-	quLATiDE1976[test] = dE1976quLATi
-	quLATiDE2000[test] = dE2000quLATi
+	# quLATiHistCorr[test] = np.mean(quLATi_corr)
+	# quLATiSpatioCorr[test] = np.mean(quLATi_spatio_corr)
+	quLATiDE[test] = dEquLATi
 
 
 filename = os.path.join(outDir, 'p{}_t{:g}_m{:g}_tests{:g}.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
@@ -281,27 +273,24 @@ with open(filename, 'w') as fid:
 	fid.write('MAGIC-LAT Performance\n\n')
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('NMSE', 	np.average(magicNMSE), 	np.std(magicNMSE)))
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('MAE', 	np.average(magicMAE), 	np.std(magicMAE)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Histogram Corr.', 	np.average(magicHistCorr), 	np.std(magicHistCorr)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Spatiogram Corr.', 	np.average(magicSpatioCorr), np.std(magicSpatioCorr)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-1976', 	np.average(magicDE1976), np.std(magicDE1976)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(magicDE2000), np.std(magicDE2000)))
+	# fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Histogram Corr.', 	np.average(magicHistCorr), 	np.std(magicHistCorr)))
+	# fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Spatiogram Corr.', 	np.average(magicSpatioCorr), np.std(magicSpatioCorr)))
+	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(magicDE), np.std(magicDE)))
 
 	fid.write('\n\n')
 
 	fid.write('GPR Performance\n\n')
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('NMSE', 	np.average(gprNMSE), 	np.std(gprNMSE)))
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('MAE', 	np.average(gprMAE), 	np.std(gprMAE)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Histogram Corr.', 	np.average(gprHistCorr), 	np.std(gprHistCorr)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Spatiogram Corr.', 	np.average(gprSpatioCorr), 	np.std(gprSpatioCorr)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-1976', 	np.average(gprDE1976), np.std(gprDE1976)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(gprDE2000), np.std(gprDE2000)))
+	# fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Histogram Corr.', 	np.average(gprHistCorr), 	np.std(gprHistCorr)))
+	# fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Spatiogram Corr.', 	np.average(gprSpatioCorr), 	np.std(gprSpatioCorr)))
+	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(gprDE), np.std(gprDE)))
 
 	fid.write('\n\n')
 
 	fid.write('quLATi Performance\n\n')
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('NMSE', 	np.average(quLATiNMSE), 	np.std(quLATiNMSE)))
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('MAE', 	np.average(quLATiMAE), 	np.std(quLATiMAE)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Histogram Corr.', 	np.average(quLATiHistCorr), 	np.std(quLATiHistCorr)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Spatiogram Corr.', 	np.average(quLATiSpatioCorr), 	np.std(quLATiSpatioCorr)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-1976', 	np.average(quLATiDE1976), np.std(quLATiDE1976)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(quLATiDE2000), np.std(quLATiDE2000)))
+	# fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Histogram Corr.', 	np.average(quLATiHistCorr), 	np.std(quLATiHistCorr)))
+	# fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('Spatiogram Corr.', 	np.average(quLATiSpatioCorr), 	np.std(quLATiSpatioCorr)))
+	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(quLATiDE), np.std(quLATiDE)))

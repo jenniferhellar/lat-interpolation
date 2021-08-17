@@ -1,7 +1,7 @@
 
 import os
 
-# workDir = '/home/jlh24/latproj'
+# workDir = '/home/jlh24/latInterpolation'
 # dataDir = os.path.join(workDir, 'data/')
 
 workDir = 'D:\jhell\git-repos\lat-interpolation'

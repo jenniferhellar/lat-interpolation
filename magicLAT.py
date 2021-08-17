@@ -1,17 +1,15 @@
 
 import numpy as np
-
 import math
-# plotting packages
-import matplotlib.pyplot as plt
-import matplotlib.tri as mtri
-
-from numpy.linalg import norm
 
 import robust_laplacian
 
 # nearest-neighbor interpolation
 from scipy.interpolate import griddata
+
+# KD-Tree for mapping to nearest point
+from scipy.spatial import cKDTree
+
 
 
 def edgeMatrix(coordinateMatrix, connectivityMatrix):
@@ -62,29 +60,49 @@ def edgeMatrix(coordinateMatrix, connectivityMatrix):
 	return [np.array(edges), triangles]
 
 
+def updateEdges(V, E, latTiled, knownV, thresh, returnMidpoints=False):
+	newE = []
 
-def updateEdges(coordinateMatrix, edges, lat, thresh):
-	newEdges = []
+	if returnMidpoints:
+		excl_midpt = []
 
-	excl_midpt = []
+	# KD Tree to find the nearest known mesh vertex
+	coordKDtree = cKDTree(knownV)
 
-	for i in range(len(edges)):
-		e = list(edges[i])
-		v_i = e[0]
+	for i in range(len(E)):
+		e = list(E[i])
+		v_i = e[0]	# vertex indices
 		v_j = e[1]
-		lat_i = lat[v_i]
-		lat_j = lat[v_j]
+		lat_i = latTiled[v_i]	# lat values (tiled manifold)
+		lat_j = latTiled[v_j]
 
-		if abs(lat_j - lat_i) < thresh:
-			newEdges.append(e)
+		[x1, y1, z1] = V[v_i, :]	# vertex coordinates
+		[x2, y2, z2] = V[v_j, :]
+
+		# find distance from nearest known point to vertex i
+		[di, ni] = coordKDtree.query([x1, y1, z1], k=2)
+		if di[0] > 0:
+			di = di[0]
 		else:
-			[x1, y1, z1] = coordinateMatrix[v_i, :]
-			[x2, y2, z2] = coordinateMatrix[v_j, :]
+			di = di[1]	# first point found may be itself
+		# find distance from nearest known point to vertex j
+		[dj, nj] = coordKDtree.query([x2, y2, z2], k=2)
+		if dj[0] > 0:
+			dj = dj[0]
+		else:
+			dj = dj[1]	# first point found may be itself
+
+		if (abs(lat_j - lat_i) < thresh) or (di > 15) or (dj > 15):
+		# if (abs(lat_j - lat_i) < thresh):
+			newE.append(e)
+		elif returnMidpoints:
 			[x, y, z] = [float(x1+x2)/2, float(y1+y2)/2, float(z1+z2)/2]
 			excl_midpt.append([x, y, z])
 
-	return [np.array(newEdges), np.array(excl_midpt)]
-
+	if returnMidpoints:
+		return [np.array(newE), np.array(excl_midpt)]
+	else:
+		return np.array(newE)
 
 
 def getUnWeightedAdj(n, edges):
@@ -101,7 +119,6 @@ def getUnWeightedAdj(n, edges):
 		A[v_j, v_i] = 1
 
 	return A
-
 
 
 def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=5e-05, beta=1):
@@ -136,7 +153,7 @@ def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=5e-05, beta
 		else:
 			latNN[i] = lat[i]
 
-	[edges, excl_midpt] = updateEdges(V, E, latNN, edgeThreshold)
+	edges = updateEdges(V, E, latNN, trCoord, edgeThreshold)
 
 	A = getUnWeightedAdj(N, edges)
 

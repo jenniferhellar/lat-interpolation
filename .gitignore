@@ -1,4 +1,5 @@
 data/
+res_reg/
 results_wip/
 results_repeated_wip/
 results_toy/
@@ -19,3 +20,4 @@ venv.bak/
 
 *.npy
 *.xlsx
+*.pdf

@@ -1,471 +1,249 @@
-
-"""
-Requirements: numpy, scipy, matplotlib, scikit-learn
-"""
-
-import os
-
 import numpy as np
-import math
-import random
 
-# plotting packages
-from vedo import *
-
-from matplotlib import pyplot as plt
-
-# loading images
 import cv2
+import matplotlib.cm as cm
+from matplotlib.colors import Normalize
+import colour
 
-# Gaussian process regression interpolation
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF
+import matplotlib.pyplot as plt
 
-# functions to read the files
-from readMesh import readMesh
-from readLAT import readLAT
 
-from js import *
+def calcMSE(sig, sigEst):
+	n = len(sig)
 
+	err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+	err = np.array(err)
 
-from utils import *
-from const import *
-from magicLAT import *
+	mse = 1/n*np.sum(err ** 2)
 
-from qulati import gpmi, eigensolver
+	return mse
 
-def getPSNR(I1, I2):
-    s1 = cv2.absdiff(I1, I2) #|I1 - I2|
-    s1 = np.float32(s1)     # cannot make a square on 8 bits
-    s1 = s1 * s1            # |I1 - I2|^2
-    sse = s1.sum()          # sum elements per channel
-    if sse <= 1e-10:        # sum channels
-        return 0            # for small values return zero
-    else:
-        shape = I1.shape
-        mse = 1.0 * sse / (shape[0] * shape[1] * shape[2])
-        psnr = 10.0 * np.log10((255 * 255) / mse)
-        return psnr
 
-"""
-p033 = 9
-p034 = 14
-p035 = 18
-p037 = 21
-"""
-PATIENT_MAP				=		21
+def calcMAE(sig, sigEst):
+	delta = [abs(sig[i] - sigEst[i]) for i in range(len(sig))]
+	delta = np.array(delta)
+	return np.average(delta)
 
-NUM_TRAIN_SAMPS 		= 		100
-EDGE_THRESHOLD			=		50
 
-outDir				 	=		'results_wip'
+def calcPercError(sig, sigEst):
+	n = len(sig)
 
-""" Read the files """
-meshFile = meshNames[PATIENT_MAP]
-latFile = latNames[PATIENT_MAP]
-nm = meshFile[0:-5]
-patient = nm[7:10]
-
-print('Reading files for ' + nm + ' ...\n')
-[vertices, faces] = readMesh(os.path.join(dataDir, meshFile))
-[OrigLatCoords, OrigLatVals] = readLAT(os.path.join(dataDir, latFile))
-
-n = len(vertices)
+	err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+	err = [1 for i in err if i > 10]
+	err = np.array(err)
 
-mapIdx = [i for i in range(n)]
-mapCoord = [vertices[i] for i in mapIdx]
+	return float(np.sum(err))/n
 
-allLatIdx, allLatCoord, allLatVal = mapSamps(mapIdx, mapCoord, OrigLatCoords, OrigLatVals)
 
-M = len(allLatIdx)
+def calcNMSE(sig, sigEst, multichannel=False):
+	if multichannel:
+		print(sig.shape, sigEst.shape)
+		err = (np.array(sigEst) - np.array(sig)) ** 2
+		err = np.sum(err, axis=0, keepdims = True)
+		meanvec = np.array(np.mean(sig, axis=0), ndmin=2)
+		# sigPower = np.sum((np.array(sig) - meanvec), axis=0, keepdims = True)
+		sigPower = np.sum(np.array(sig), axis=0, keepdims=True)
 
-mesh = Mesh([vertices, faces])
-# mesh.backColor('white').lineColor('black').lineWidth(0.25)
-mesh.c('grey')
+		nmse = err / sigPower
+	else:
+		n = len(sig)
 
-origLatPoints = Points(OrigLatCoords, r=10).cmap('rainbow_r', OrigLatVals, vmin=np.min(OrigLatVals), vmax=np.max(OrigLatVals)).addScalarBar()
-latPoints = Points(allLatCoord, r=10).cmap('rainbow_r', allLatVal, vmin=np.min(allLatVal), vmax=np.max(allLatVal)).addScalarBar()
+		err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+		err = np.array(err)
 
-# KD Tree to find the nearest mesh vertex
-k = 6
-coordKDtree = cKDTree(allLatCoord)
-[dist, nearestVers] = coordKDtree.query(allLatCoord, k=k)
+		sigKnown = [sig[i] for i in range(n)]
+		sigPower = np.sum((np.array(sigKnown) - np.mean(sigKnown)) ** 2)
 
-anomalous = np.zeros(M)
+		nmse = np.sum(err ** 2)/sigPower
 
-for i in range(M):
-	verCoord = allLatCoord[i]
-	verVal = allLatVal[i]
+	return nmse
 
-	neighbors = [nearestVers[i, n] for n in range(1,k) if dist[i,n] < 5]
 
-	adj = len(neighbors)
+def calcNRMSE(sig, sigEst):
+	n = len(sig)
 
-	cnt = 0
-	for neighVer in neighbors:
-		neighVal = allLatVal[neighVer]
+	err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+	sqErr = np.array(err) ** 2
 
-		if abs(verVal - neighVal) > 50:
-			cnt += 1
-		else:
-			break
+	rmse = (np.sum(sqErr)/n)**(1/2)
+	nRMSE = 100*rmse/(np.max(sig) - np.min(sig))
 
-	# if (cnt >= (len(neighbors)-1) and len(neighbors) > 1):	# differs from all but 1 neighbor by >50ms and has at least 2 neighbors w/in 5mm
-	if cnt > 1 and adj > 1:
-		anomalous[i] = 1
-		# print(cnt, adj)
+	return nRMSE
 
-		# print(verVal, [allLatVal[neighVer] for neighVer in neighbors])
 
-numPtsIgnored = np.sum(anomalous)
+def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cm.rainbow_r):
+	norm = Normalize(vmin=MINLAT, vmax=MAXLAT)
+	m = cm.ScalarMappable(norm=norm, cmap=cmap)
 
-latIdx = [allLatIdx[i] for i in range(M) if anomalous[i] == 0]
-latCoords = [allLatCoord[i] for i in range(M) if anomalous[i] == 0]
-latVals = [allLatVal[i] for i in range(M) if anomalous[i] == 0]
+	trueVals = list(np.array(trueVals).flatten())
+	estVals = list(np.array(estVals).flatten())
 
-M = len(latIdx)
+	trueColors = m.to_rgba(trueVals)[:,:3]	# multiply by 255 for RGB
 
-print('{:<20}{:g}'.format('n', n))
-print('{:<20}{:g}/{:g}'.format('m', NUM_TRAIN_SAMPS, M))
-print('{:<20}{:g}\n'.format('ignored', numPtsIgnored))
-# exit()
+	trueColors = np.array([trueColors])	# cvtColor req 2-dim array
+	# print(trueColors[0, 0])
 
-mapLAT = [0 for i in range(n)]
-for i in range(M):
-	mapLAT[latIdx[i]] = latVals[i]
+	trueColors = cv2.cvtColor(trueColors.astype("float32"), cv2.COLOR_RGB2LAB)
+	# print(trueColors[0, 0])
+	estColors = m.to_rgba(estVals)[:,:3]
+	estColors = np.array([estColors])
+	estColors = cv2.cvtColor(estColors.astype("float32"), cv2.COLOR_RGB2LAB)
 
-edgeFile = 'E_p{}.npy'.format(patient)
-if not os.path.isfile(edgeFile):
-	[edges, TRI] = edgeMatrix(vertices, faces)
+	dE = np.mean(colour.delta_E(trueColors, estColors, method='CIE 2000'))
 
-	print('Writing edge matrix to file...')
-	with open(edgeFile, 'wb') as fid:
-		np.save(fid, edges)
-else:
-	edges = np.load(edgeFile, allow_pickle=True)
+	return dE
 
-if not os.path.isdir(outDir):
-	os.makedirs(outDir)
 
-"""
-Solve the eigenproblem
-"""
-QFile = 'Q_p{}.npy'.format(patient)
-VFile = 'V_p{}.npy'.format(patient)
-gradVFile = 'gradV_p{}.npy'.format(patient)
+def calcSNR(sig, sigEst):
+	n = len(sig)
+	err = [abs(sigEst[i] - sig[i]) for i in range(n)]
+	err = np.array(err)
 
-# model with reduced rank efficiency
-if not os.path.isfile(QFile):
-	Q, V, gradV, centroids = eigensolver(vertices, np.array(faces), holes = 0, layers = 10, num = 256)
-	with open(QFile, 'wb') as fid:
-		np.save(fid, Q)
-	with open(VFile, 'wb') as fid:
-		np.save(fid, V)
-	with open(gradVFile, 'wb') as fid:
-		np.save(fid, gradV)
-else:
-	Q = np.load(QFile, allow_pickle = True)
-	V = np.load(VFile, allow_pickle = True)
-	gradV = np.load(gradVFile, allow_pickle = True)
+	sigKnown = [sig[i] for i in range(n)]
+	sigPower = np.sum((np.array(sigKnown) - np.mean(sigKnown)) ** 2)
 
-model = gpmi.Matern(vertices, np.array(faces), Q, V, gradV, JAX = False)
+	snr = 20*np.log10(sigPower/np.sum(err ** 2))
 
-sampLst = [i for i in range(M)]
+	return snr
 
 
-tr_i = random.sample(sampLst, NUM_TRAIN_SAMPS)
-tst_i = [i for i in sampLst if i not in tr_i]
+def compute_metrics(sig, sigEst):
 
-# get vertex indices of labelled/unlabelled nodes
-TrIdx = sorted(np.take(latIdx, tr_i))
-TstIdx = sorted(np.take(latIdx, tst_i))
+	nmse = calcNMSE(sig, sigEst)
+	snr = calcSNR(sig, sigEst)
+	mae = calcMAE(sig, sigEst)
+	nrmse = calcNRMSE(sig, sigEst)
 
-# get vertex coordinates
-TrCoord = [vertices[i] for i in TrIdx]
-TstCoord = [vertices[i] for i in TstIdx]
+	return nmse, snr, mae, nrmse
 
-# get mapLAT signal values
-TrVal = [mapLAT[i] for i in TrIdx]
-TstVal = [mapLAT[i] for i in TstIdx]
 
+def js(mu1, sigma1, n1, mu2, sigma2, n2):
+	if (n1 == 0 and n2 == 0):
+		return 0
 
-""" MAGIC-LAT estimate """
-latEst = magicLAT(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
+	mu_hat = (n2*mu1 + n1*mu2)/(n1 + n2)
 
-""" Create GPR kernel and regressor """
-gp_kernel = RBF(length_scale=0.01) + RBF(length_scale=0.1) + RBF(length_scale=1)
-gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
+	sigma_hat = n2/(n1+n2) * (sigma1 + np.matmul(mu1, mu1.T)) + \
+		n1/(n1+n2) * (sigma2 + np.matmul(mu2, mu2.T)) - np.matmul(mu_hat, mu_hat.T)
 
-""" GPR estimate """
-# fit the GPR with training samples
-gpr.fit(TrCoord, TrVal)
+	if np.linalg.det(sigma1) <= 0 or np.linalg.det(sigma2) <= 0 or np.linalg.det(sigma_hat) <= 0:
+		return 0
 
-# predict the entire signal
-latEstGPR = gpr.predict(vertices, return_std=False)
+	t0 = math.log(np.linalg.det(sigma_hat))
 
-""" quLATi estimate """
-obs = np.array(TrVal)
-quLATi_vertices = np.array(TrIdx)
+	t1 = 1/2 * np.trace(np.matmul(np.linalg.inv(sigma_hat), (sigma1 + sigma2)))
 
-model.set_data(obs, quLATi_vertices)
-model.kernelSetup(smoothness = 3./2.)
+	t2 = 1/4 * np.matmul((mu1 - mu2).T, np.matmul(np.linalg.inv(sigma_hat), (mu1 - mu2)))
 
-# optimize the nugget
-model.optimize(nugget = None, restarts = 5)
+	t3 = 1/2 * math.log(np.linalg.det(sigma1) * np.linalg.det(sigma2))
 
-pred_mean, pred_stdev = model.posterior(pointwise = True)
+	js_div = t0 + t1 - 2 + t2 - t3
 
-latEstquLATi = pred_mean[0:vertices.shape[0]]
+	return js_div
 
 
-# For colorbar ranges
-MINLAT = math.floor(min(allLatVal)/10)*10
-MAXLAT = math.ceil(max(allLatVal)/10)*10
+def findSpatioMeanAndSigma(bins, binEdges, fig, nonEmpty):
 
-# for patient 034
-# elev = 0
-# azimuth = 120
-# roll = -45
+	dimX = fig.shape[0]
+	dimY = fig.shape[1]
 
-# for patient 035
-elev = 0
-azimuth = 0
-roll = 0
-
-verPoints = Points(latCoords, r=10).cmap('rainbow_r', latVals, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
-
-"""
-Figure 0: Ground truth (entire), training points, and MAGIC-LAT (entire)
-"""
-vplt = Plotter(N=3, axes=9, offscreen=True)
-
-# Plot 0: Ground truth
-vplt.show(mesh, verPoints, 'all known points', azimuth=azimuth, elevation=elev, roll=roll, at=0)
-
-# Plot 1: Training points
-trainPoints = Points(TrCoord, r=10).cmap('rainbow_r', TrVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
-vplt.show(mesh, trainPoints, 'training points', at=1)
-
-# Plot 2: MAGIC-LAT output signal
-magicPoints = Points(vertices, r=10).cmap('rainbow_r', latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
-
-# mesh.interpolateDataFrom(magicPoints, N=1).cmap('rainbow_r').addScalarBar()
-
-vplt.show(mesh, magicPoints, verPoints, 'interpolation result', title='MAGIC-LAT', at=2, interactive=True)
-vplt.screenshot(filename=os.path.join(outDir, 'magic.png'), returnNumpy=False)
-vplt.close()
-
-
-"""
-Figure 1: Ground truth (entire), training points, and GPR (entire)
-"""
-vplt = Plotter(N=3, axes=9, offscreen=True)
-
-# Plot 0: Ground truth
-vplt.show(mesh, verPoints, 'all known points', azimuth=azimuth, elevation=elev, roll=roll, at=0)
-# Plot 1: Training points
-vplt.show(mesh, trainPoints, 'training points', at=1)
-# Plot 2: GPR output signal
-gprPoints = Points(vertices, r=10).cmap('rainbow_r', latEstGPR, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
-
-# mesh.interpolateDataFrom(gprPoints, N=1).cmap('rainbow_r').addScalarBar()
-
-vplt.show(mesh, gprPoints, verPoints, 'interpolation result', title='GPR', at=2, interactive=True)
-vplt.screenshot(filename=os.path.join(outDir, 'gpr.png'), returnNumpy=False)
-vplt.close()
-
-"""
-Figure 2: Ground truth (entire), training points, and GPR (entire)
-"""
-vplt = Plotter(N=3, axes=9, offscreen=True)
-
-# Plot 0: Ground truth
-vplt.show(mesh, verPoints, 'all known points', azimuth=azimuth, elevation=elev, roll=roll, at=0)
-# Plot 1: Training points
-vplt.show(mesh, trainPoints, 'training points', at=1)
-# Plot 2: GPR output signal
-quLATiPoints = Points(vertices, r=10).cmap('rainbow_r', latEstquLATi, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
-
-# mesh.interpolateDataFrom(quLATiPoints, N=1).cmap('rainbow_r').addScalarBar()
-
-vplt.show(mesh, quLATiPoints, verPoints, 'interpolation result', title='GPR', at=2, interactive=True)
-vplt.screenshot(filename=os.path.join(outDir, 'quLATi.png'), returnNumpy=False)
-vplt.close()
-
-
-# mesh.interpolateDataFrom(pts, N=1).cmap('rainbow_r').addScalarBar()
-elev = 0
-azim = [-60, 30, 120, 210]
-roll = -45
-whitemesh = Mesh([vertices, faces], c='black')
-
-"""
-Figure 3: Ground truth (test points only - for ssim)
-"""
-vplt = Plotter(N=1, axes=0, offscreen=True)
-testPoints = Points(TstCoord, r=20).cmap('rainbow_r', TstVal, vmin=MINLAT, vmax=MAXLAT)
-for a in azim:
-	vplt.show(whitemesh, testPoints, azimuth=a, elevation=elev, roll=roll, title='true, azimuth={:g}'.format(a), bg='black')
-	vplt.screenshot(filename=os.path.join(outDir, 'true{:g}.png'.format(a)), returnNumpy=False)
-
-vplt.close()
-
-"""
-Figure 4: MAGIC-LAT estimate (test points only - for ssim)
-"""
-vplt = Plotter(N=1, axes=0, offscreen=True)
-testEst = Points(TstCoord, r=20).cmap('rainbow_r', latEst[TstIdx], vmin=MINLAT, vmax=MAXLAT)
-
-for a in azim:
-	vplt.show(whitemesh, testEst, azimuth=a, elevation=elev, roll=roll, title='MAGIC-LAT, azimuth={:g}'.format(a), bg='black')
-	vplt.screenshot(filename=os.path.join(outDir, 'estimate{:g}.png'.format(a)), returnNumpy=False)
-
-vplt.close()
-
-"""
-Figure 5: GPR estimate (test points only - for ssim)
-"""
-vplt = Plotter(N=1, axes=0, offscreen=True)
-testEstGPR = Points(TstCoord, r=20).cmap('rainbow_r', latEstGPR[TstIdx], vmin=MINLAT, vmax=MAXLAT)
-
-for a in azim:
-	vplt.show(whitemesh, testEstGPR, azimuth=a, elevation=elev, roll=roll, title='GPR, azimuth={:g}'.format(a), bg='black')
-	vplt.screenshot(filename=os.path.join(outDir, 'estimateGPR{:g}.png'.format(a)), returnNumpy=False)
-
-vplt.close()
-
-
-"""
-Figure 6: quLATi estimate (test points only for ssim)
-"""
-vplt = Plotter(N=1, axes=0, offscreen=True)
-testEstquLATi = Points(TstCoord, r=20).cmap('rainbow_r', latEstquLATi[TstIdx], vmin=MINLAT, vmax=MAXLAT)
-
-for a in azim:
-	vplt.show(whitemesh, testEstquLATi, azimuth=a, elevation=elev, roll=roll, title='quLATi, azimuth={:g}'.format(a), bg='black')
-	vplt.screenshot(filename=os.path.join(outDir, 'estimatequLATi{:g}.png'.format(a)), returnNumpy=False)
-
-vplt.close()
-
-
-"""
-Error metrics
-"""
-
-nmse = calcNMSE(TstVal, latEst[TstIdx])
-nmseGPR = calcNMSE(TstVal, latEstGPR[TstIdx])
-nmsequLATi = calcNMSE(TstVal, latEstquLATi[TstIdx])
-
-mae = calcMAE(TstVal, latEst[TstIdx])
-maeGPR = calcMAE(TstVal, latEstGPR[TstIdx])
-maequLATi = calcMAE(TstVal, latEstquLATi[TstIdx])
-
-magic_spatio_corr = []
-gpr_spatio_corr = []
-quLATi_spatio_corr = []
-
-magic_corr = []
-gpr_corr = []
-quLATi_corr = []
-
-bins = 16
-binEdges = [i*256/bins for i in range(bins+1)]
-
-for a in azim:
-	img = cv2.imread(os.path.join(outDir, 'true{:g}.png'.format(a)), cv2.IMREAD_GRAYSCALE)
-	n_black_px = np.sum(img == 0)
-	dimX = img.shape[0]
-	dimY = img.shape[1]
-	# numpx = np.sum(img > 0)
-
-	figTruth = cv2.imread(os.path.join(outDir, 'true{:g}.png'.format(a)))
-	figTruth = cv2.cvtColor(figTruth, cv2.COLOR_BGR2RGB)
-	
-	true_hist = cv2.calcHist([figTruth], [0, 1, 2], None, [bins, bins, bins],
-		[0, 256, 0, 256, 0, 256])
-	true_hist[0, 0, 0] -= n_black_px
-	true_hist_flat = cv2.normalize(true_hist, true_hist).flatten()
-
-	figEst = cv2.imread(os.path.join(outDir, 'estimate{:g}.png'.format(a)))
-	figEst = cv2.cvtColor(figEst, cv2.COLOR_BGR2RGB)
-	
-	magic_hist = cv2.calcHist([figEst], [0, 1, 2], None, [bins, bins, bins],
-		[0, 256, 0, 256, 0, 256])
-	magic_hist[0, 0, 0] -= n_black_px
-	magic_hist_flat = cv2.normalize(magic_hist, magic_hist).flatten()
-
-	figEstGPR = cv2.imread(os.path.join(outDir, 'estimateGPR{:g}.png'.format(a)))
-	figEstGPR = cv2.cvtColor(figEstGPR, cv2.COLOR_BGR2RGB)
-	
-	gpr_hist = cv2.calcHist([figEstGPR], [0, 1, 2], None, [bins, bins, bins],
-		[0, 256, 0, 256, 0, 256])
-	gpr_hist[0, 0, 0] -= n_black_px
-	gpr_hist_flat = cv2.normalize(gpr_hist, gpr_hist).flatten()
-
-	figEstquLATi = cv2.imread(os.path.join(outDir, 'estimatequLATi{:g}.png'.format(a)))
-	figEstquLATi = cv2.cvtColor(figEstquLATi, cv2.COLOR_BGR2RGB)
-	
-	quLATi_hist = cv2.calcHist([figEstquLATi], [0, 1, 2], None, [bins, bins, bins],
-		[0, 256, 0, 256, 0, 256])
-	quLATi_hist[0, 0, 0] -= n_black_px
-	quLATi_hist_flat = cv2.normalize(quLATi_hist, quLATi_hist).flatten()
-
-	true_mean = np.zeros((bins, bins, bins, 2))
-	true_sigma = np.zeros((bins, bins, bins, 2, 2))
-
-	magic_mean = np.zeros((bins, bins, bins, 2))
-	magic_sigma = np.zeros((bins, bins, bins, 2, 2))
-
-	gpr_mean = np.zeros((bins, bins, bins, 2))
-	gpr_sigma = np.zeros((bins, bins, bins, 2, 2))
-
-	quLATi_mean = np.zeros((bins, bins, bins, 2))
-	quLATi_sigma = np.zeros((bins, bins, bins, 2, 2))
+	mu = np.zeros((bins, bins, bins, 2))
+	sigma = np.zeros((bins, bins, bins, 2, 2))
 
 	for r_i, r_v in enumerate(binEdges):
 		for g_i, g_v in enumerate(binEdges):
 			for b_i, b_v in enumerate(binEdges):
 				if r_v < 256 and g_v < 256 and b_v < 256:
+					if nonEmpty[r_i, g_i, b_i]:
+						pxls = np.column_stack(np.where((fig[:, :, 0] >= r_v) & (fig[:, :, 0] < binEdges[r_i + 1]) & \
+							(fig[:, :, 1] >= g_v) & (fig[:, :, 1] < binEdges[g_i + 1]) & \
+							(fig[:, :, 2] >= b_v) & (fig[:, :, 2] < binEdges[b_i + 1])))
+						if pxls.shape[0] == 0:
+							mu[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
+							sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
+						else:
+							mu[r_i, g_i, b_i] = np.mean(pxls, axis=0)
+							sigma[r_i, g_i, b_i] = np.cov(pxls, rowvar=0)
+	return mu, sigma
+
+
+def spatioCorr(bins, nonEmpty, trueMean, trueSigma, trueHist, 
+	estMean, estSigma, estHist):
+	spatcorr = 0
+
+	for i in range(bins):
+		for j in range(bins):
+			for k in range(bins):
+				if nonEmpty[i,j,k]:
+					estjs = js(trueMean[i,j,k], trueSigma[i,j,k], trueHist[i,j,k], 
+						estMean[i,j,k], estSigma[i,j,k], estHist[i,j,k])
+
+					# Histogram correlation
+					num = trueHist[i,j,k] * estHist[i,j,k]
+					denom = math.sqrt(np.sum(trueHist ** 2) * np.sum(estHist ** 2))
+					spatcorr += (num / denom) * math.exp(-1 * estjs)
+
+					# # Histogram intersection
+					# spatcorr += min(trueHist[i, j, k], estHist[i, j, k])*math.exp(-1 * estjs)
+
+	return spatcorr
+
+
+def colorHistAndSpatioCorr(outDir, trueImageFile,
+		magicImageFile, gprImageFile, quLATiImageFile,
+		bins, binEdges, outputFileSuffix):
+	img = cv2.imread(os.path.join(outDir, trueImageFile), cv2.IMREAD_GRAYSCALE)
+	n_black_px = np.sum(img == 0)
+	# numpx = np.sum(img > 0)
+
+	figTruth = cv2.imread(os.path.join(outDir, trueImageFile))
+	figTruth = cv2.cvtColor(figTruth, cv2.COLOR_BGR2RGB)
+	
+	true_hist = cv2.calcHist([figTruth], [0, 1, 2], None, [bins, bins, bins],
+		[0, 256, 0, 256, 0, 256])
+	true_hist[0, 0, 0] -= n_black_px
+	cv2.normalize(true_hist, true_hist)
+	true_hist_flat = true_hist.flatten()
+
+	figEst = cv2.imread(os.path.join(outDir, magicImageFile))
+	figEst = cv2.cvtColor(figEst, cv2.COLOR_BGR2RGB)
+	
+	magic_hist = cv2.calcHist([figEst], [0, 1, 2], None, [bins, bins, bins],
+		[0, 256, 0, 256, 0, 256])
+	magic_hist[0, 0, 0] -= n_black_px
+	cv2.normalize(magic_hist, magic_hist)
+	magic_hist_flat = magic_hist.flatten()
+
+	figEstGPR = cv2.imread(os.path.join(outDir, gprImageFile))
+	figEstGPR = cv2.cvtColor(figEstGPR, cv2.COLOR_BGR2RGB)
+	
+	gpr_hist = cv2.calcHist([figEstGPR], [0, 1, 2], None, [bins, bins, bins],
+		[0, 256, 0, 256, 0, 256])
+	gpr_hist[0, 0, 0] -= n_black_px
+	cv2.normalize(gpr_hist, gpr_hist)
+	gpr_hist_flat = gpr_hist.flatten()
+
+	figEstquLATi = cv2.imread(os.path.join(outDir, quLATiImageFile))
+	figEstquLATi = cv2.cvtColor(figEstquLATi, cv2.COLOR_BGR2RGB)
+	
+	quLATi_hist = cv2.calcHist([figEstquLATi], [0, 1, 2], None, [bins, bins, bins],
+		[0, 256, 0, 256, 0, 256])
+	quLATi_hist[0, 0, 0] -= n_black_px
+	cv2.normalize(quLATi_hist, quLATi_hist)
+	quLATi_hist_flat = quLATi_hist.flatten()
+
+	nonEmpty = np.zeros((bins, bins, bins))
+	for r_i, r_v in enumerate(binEdges):
+		for g_i, g_v in enumerate(binEdges):
+			for b_i, b_v in enumerate(binEdges):
+				if r_v < 256 and g_v < 256 and b_v < 256:
 					if true_hist[r_i, g_i, b_i] > 0 or magic_hist[r_i, g_i, b_i] > 0 or gpr_hist[r_i, g_i, b_i] > 0:
-						true_pxls = np.column_stack(np.where((figTruth[:, :, 0] >= r_v) & (figTruth[:, :, 0] < binEdges[r_i + 1]) & \
-							(figTruth[:, :, 1] >= g_v) & (figTruth[:, :, 1] < binEdges[g_i + 1]) & \
-							(figTruth[:, :, 2] >= b_v) & (figTruth[:, :, 2] < binEdges[b_i + 1])))
-						if true_pxls.shape[0] == 0:
-							true_mean[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
-							true_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
-						else:
-							true_mean[r_i, g_i, b_i] = np.mean(true_pxls, axis=0)
-							true_sigma[r_i, g_i, b_i] = np.cov(true_pxls, rowvar=0)
-				
-						pxls = np.column_stack(np.where((figEst[:, :, 0] >= r_v) & (figEst[:, :, 0] < binEdges[r_i + 1]) & \
-									(figEst[:, :, 1] >= g_v) & (figEst[:, :, 1] < binEdges[g_i + 1]) & \
-									(figEst[:, :, 2] >= b_v) & (figEst[:, :, 2] < binEdges[b_i + 1])))
-						if pxls.shape[0] == 0:
-							magic_mean[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
-							magic_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
-						else:
-							magic_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
-							magic_sigma[r_i, g_i, b_i] = np.cov(pxls, rowvar=0)
+						nonEmpty[r_i, g_i, b_i] = True
 
-						pxls = np.column_stack(np.where((figEstGPR[:, :, 0] >= r_v) & (figEstGPR[:, :, 0] < binEdges[r_i + 1]) & \
-									(figEstGPR[:, :, 1] >= g_v) & (figEstGPR[:, :, 1] < binEdges[g_i + 1]) & \
-									(figEstGPR[:, :, 2] >= b_v) & (figEstGPR[:, :, 2] < binEdges[b_i + 1])))
-						if pxls.shape[0] == 0:
-							gpr_mean[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
-							gpr_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
-						else:
-							gpr_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
-							gpr_sigma[r_i, g_i, b_i] = np.cov(pxls, rowvar=0)
-
-						pxls = np.column_stack(np.where((figEstquLATi[:, :, 0] >= r_v) & (figEstquLATi[:, :, 0] < binEdges[r_i + 1]) & \
-									(figEstquLATi[:, :, 1] >= g_v) & (figEstquLATi[:, :, 1] < binEdges[g_i + 1]) & \
-									(figEstquLATi[:, :, 2] >= b_v) & (figEstquLATi[:, :, 2] < binEdges[b_i + 1])))
-						if pxls.shape[0] == 0:
-							quLATi_mean[r_i, g_i, b_i] = np.array([[dimX/2, dimY/2]])
-							quLATi_sigma[r_i, g_i, b_i] = np.array([[1, 0], [0, 1]])
-						else:
-							quLATi_mean[r_i, g_i, b_i] = np.mean(pxls, axis=0)
-							quLATi_sigma[r_i, g_i, b_i] = np.cov(pxls, rowvar=0)
+	true_mean, true_sigma = findSpatioMeanAndSigma(bins, binEdges, figTruth, nonEmpty)
+	magic_mean, magic_sigma = findSpatioMeanAndSigma(bins, binEdges, figEst, nonEmpty)
+	gpr_mean, gpr_sigma = findSpatioMeanAndSigma(bins, binEdges, figEstGPR, nonEmpty)
+	quLATi_mean, quLATi_sigma = findSpatioMeanAndSigma(bins, binEdges, figEstquLATi, nonEmpty)
 
 	plt.subplot(421, title='Ground truth image'), plt.imshow(figTruth)
 	plt.subplot(422, title='Ground truth color histograms'),
@@ -493,7 +271,7 @@ for a in azim:
 	plt.xlim([0,bins])
 
 	plt.tight_layout()
-	plt.savefig(os.path.join(outDir, 'colorHist{:g}.png'.format(a)))
+	plt.savefig(os.path.join(outDir, 'colorHist'+outputFileSuffix))
 	# plt.show()
 
 	plt.subplot(421, title='Ground truth image'), plt.imshow(figTruth)
@@ -514,65 +292,20 @@ for a in azim:
 	plt.xlim([0,true_hist_flat.shape[0]])
 
 	plt.tight_layout()
-	plt.savefig(os.path.join(outDir, 'hist{:g}.png'.format(a)))
+	plt.savefig(os.path.join(outDir, 'hist'+outputFileSuffix))
 	# plt.show()
 
-	magic_corr.append(cv2.compareHist(true_hist_flat, magic_hist_flat, cv2.HISTCMP_CORREL))
-	gpr_corr.append(cv2.compareHist(true_hist_flat, gpr_hist_flat, cv2.HISTCMP_CORREL))
-	quLATi_corr.append(cv2.compareHist(true_hist_flat, quLATi_hist_flat, cv2.HISTCMP_CORREL))
+	magic_corr = cv2.compareHist(true_hist_flat, magic_hist_flat, cv2.HISTCMP_CORREL)
+	gpr_corr = cv2.compareHist(true_hist_flat, gpr_hist_flat, cv2.HISTCMP_CORREL)
+	quLATi_corr = cv2.compareHist(true_hist_flat, quLATi_hist_flat, cv2.HISTCMP_CORREL)
 
-	# magic_corr.append(getPSNR(figTruth, figEst))
-	# gpr_corr.append(getPSNR(figTruth, figEstGPR))
-	# quLATi_corr.append(getPSNR(figTruth, figEstquLATi))
-
-	true_hist = cv2.normalize(true_hist, true_hist)
-	magic_hist = cv2.normalize(magic_hist, magic_hist)
-	gpr_hist = cv2.normalize(gpr_hist, gpr_hist)
-	quLATi_hist = cv2.normalize(quLATi_hist, quLATi_hist)
-
-	magic_similarity = 0
-	gpr_similarity = 0
-	quLATi_similarity = 0
-
-	for i in range(bins):
-		for j in range(bins):
-			for k in range(bins):
-				if true_hist[i,j,k] > 0 or magic_hist[i,j,k] > 0 or gpr_hist[i,j,k] > 0:
-					magic_js = js(true_mean[i,j,k], magic_mean[i,j,k], true_sigma[i,j,k], magic_sigma[i,j,k], true_hist[i,j,k], magic_hist[i,j,k])
-					gpr_js = js(true_mean[i,j,k], gpr_mean[i,j,k], true_sigma[i,j,k], gpr_sigma[i,j,k], true_hist[i,j,k], gpr_hist[i,j,k])
-					quLATi_js = js(true_mean[i,j,k], quLATi_mean[i,j,k], true_sigma[i,j,k], quLATi_sigma[i,j,k], true_hist[i,j,k], quLATi_hist[i,j,k])
-					
-					# Histogram correlation
-					num = true_hist[i,j,k] * magic_hist[i,j,k]
-					denom = math.sqrt(np.sum(true_hist ** 2) * np.sum(magic_hist ** 2))
-					magic_similarity += (num / denom) * math.exp(-1 * magic_js)
-
-					num = true_hist[i,j,k] * gpr_hist[i,j,k]
-					denom = math.sqrt(np.sum(true_hist ** 2) * np.sum(gpr_hist ** 2))
-					gpr_similarity += (num / denom) * math.exp(-1 * gpr_js)
-
-					num = true_hist[i,j,k] * quLATi_hist[i,j,k]
-					denom = math.sqrt(np.sum(true_hist ** 2) * np.sum(quLATi_hist ** 2))
-					quLATi_similarity += (num / denom) * math.exp(-1 * quLATi_js)
-
-					# # Intersection of histograms
-					# magic_similarity += min(true_hist[i, j, k], magic_hist[i, j, k])*math.exp(-1 * magic_js)
-					# gpr_similarity += min(true_hist[i, j, k], gpr_hist[i, j, k])*math.exp(-1 * gpr_js)
-					# quLATi_similarity += min(true_hist[i, j, k], quLATi_hist[i, j, k])*math.exp(-1 * quLATi_js)
-
-	# print('{:<20.6f}{:<20.6f}\n'.format(magic_similarity, gpr_similarity))
-	magic_spatio_corr.append(magic_similarity)
-	gpr_spatio_corr.append(gpr_similarity)
-	quLATi_spatio_corr.append(quLATi_similarity)
-
-
-with open(os.path.join(outDir, 'metrics_ex.txt'), 'w') as fid:
-	fid.write('{:<20}{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR', 'quLATi'))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseGPR, nmsequLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeGPR, maequLATi))
-
-	fid.write('\nColor-Based\n')
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Histogram Corr.', np.mean(magic_corr), np.mean(gpr_corr), np.mean(quLATi_corr)))
+	magic_spatiocorr = spatioCorr(bins, nonEmpty, true_mean, true_sigma, true_hist, 
+		magic_mean, magic_sigma, magic_hist)
 	
-	fid.write('\n')
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Spatiogram Corr.', np.mean(magic_spatio_corr), np.mean(gpr_spatio_corr), np.mean(quLATi_spatio_corr)))
+	gpr_spatiocorr = spatioCorr(bins, nonEmpty, true_mean, true_sigma, true_hist, 
+		gpr_mean, gpr_sigma, gpr_hist)
+
+	quLATi_spatiocorr = spatioCorr(bins, nonEmpty, true_mean, true_sigma, true_hist, 
+		quLATi_mean, quLATi_sigma, quLATi_hist)
+
+	return magic_spatiocorr, magic_corr, gpr_spatiocorr, gpr_corr, quLATi_spatiocorr, quLATi_corr

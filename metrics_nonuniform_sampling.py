@@ -9,9 +9,6 @@ import numpy as np
 import math
 import random
 
-# plotting packages
-from vedo import *
-
 # Gaussian process regression interpolation
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
@@ -23,6 +20,7 @@ from readLAT import readLAT
 
 from utils import *
 from const import *
+from metrics import *
 from magicLAT import *
 
 from quLATiHelper import *
@@ -34,9 +32,10 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		18
+PATIENT_MAP				=		21
 
 NUM_TRAIN_SAMPS 		= 		100
+
 EDGE_THRESHOLD			=		50
 
 outDir				 	=		'results_wip'
@@ -189,9 +188,9 @@ mae = calcMAE(TstVal, latEst[TstIdx])
 maeGPR = calcMAE(TstVal, latEstGPR[TstIdx])
 maequLATi = calcMAE(TstVal, latEstquLATi[TstIdx])
 
-dE1976, dE2000 = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
-dE1976GPR, dE2000GPR = deltaE(TstVal, [latEstGPR[TstIdx]], MINLAT, MAXLAT)
-dE1976quLATi, dE2000quLATi = deltaE(TstVal, [latEstquLATi[TstIdx]], MINLAT, MAXLAT)
+dE = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
+dEGPR = deltaE(TstVal, latEstGPR[TstIdx], MINLAT, MAXLAT)
+dEquLATi = deltaE(TstVal, latEstquLATi[TstIdx], MINLAT, MAXLAT)
 
 # magic_spatio_corr = []
 # gpr_spatio_corr = []
@@ -250,5 +249,4 @@ with open(os.path.join(outDir, 'metrics.txt'), 'w') as fid:
 	fid.write('\nColor-Based\n')
 	# fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Histogram Corr.', np.mean(magic_corr), np.mean(gpr_corr), np.mean(quLATi_corr)))
 	# fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Spatiogram Corr.', np.mean(magic_spatio_corr), np.mean(gpr_spatio_corr), np.mean(quLATi_spatio_corr)))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-1976', dE1976, dE1976GPR, dE1976quLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-2000', dE2000, dE2000GPR, dE2000quLATi))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-2000', dE, dEGPR, dEquLATi))
