@@ -22,6 +22,7 @@ from readLAT import readLAT
 
 
 from utils import *
+from metrics import *
 from const import *
 from magicLAT import *
 
@@ -29,12 +30,17 @@ from quLATiHelper import *
 
 
 """
+To large for my computer:
+p031 = 3
+p032 = 6
+
+Testable:
 p033 = 9
 p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		18
+PATIENT_MAP				=		21
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -198,11 +204,11 @@ maequLATi = calcMAE(TstVal, latEstquLATi[TstIdx])
 
 maeCotan = calcMAE(TstVal, latEstcotan[TstIdx])
 
-dE1976, dE2000 = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
-dE1976GPR, dE2000GPR = deltaE(TstVal, [latEstGPR[TstIdx]], MINLAT, MAXLAT)
-dE1976quLATi, dE2000quLATi = deltaE(TstVal, [latEstquLATi[TstIdx]], MINLAT, MAXLAT)
+dE = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
+dEGPR = deltaE(TstVal, latEstGPR[TstIdx], MINLAT, MAXLAT)
+dEquLATi = deltaE(TstVal, latEstquLATi[TstIdx], MINLAT, MAXLAT)
 
-dE1976cotan, dE2000cotan = deltaE(TstVal, latEstcotan[TstIdx], MINLAT, MAXLAT)
+dEcotan = deltaE(TstVal, latEstcotan[TstIdx], MINLAT, MAXLAT)
 
 with open(os.path.join(outDir, 'metrics.txt'), 'w') as fid:
 	fid.write('{:<20}{:<20}{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'ML-Cotan', 'GPR', 'quLATi'))
@@ -212,5 +218,4 @@ with open(os.path.join(outDir, 'metrics.txt'), 'w') as fid:
 	fid.write('\nColor-Based\n')
 	# fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Histogram Corr.', np.mean(magic_corr), np.mean(gpr_corr), np.mean(quLATi_corr)))
 	# fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Spatiogram Corr.', np.mean(magic_spatio_corr), np.mean(gpr_spatio_corr), np.mean(quLATi_spatio_corr)))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-1976', dE1976, dE1976cotan, dE1976GPR, dE1976quLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-2000', dE2000, dE2000cotan, dE2000GPR, dE2000quLATi))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-2000', dE, dEcotan, dEGPR, dEquLATi))

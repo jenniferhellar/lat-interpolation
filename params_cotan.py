@@ -68,7 +68,7 @@ nm = meshFile[0:-5]
 patient = nm[7:10]
 
 # create a results directory
-resDir = os.path.join('..','res_reg')
+resDir = os.path.join('..','res_reg_cotan')
 if not os.path.isdir(resDir):
 	os.makedirs(resDir)
 
@@ -82,10 +82,6 @@ with open(resFileSNR, 'w') as fid:
 
 resFileMAE = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_mae.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
 with open(resFileMAE, 'w') as fid:
-	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
-
-resFileDE1976 = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_de1976.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
-with open(resFileDE1976, 'w') as fid:
 	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
 
 resFileDE2000 = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_de2000.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
@@ -148,7 +144,6 @@ for a_idx in range(len(alphas)):
 		magicNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 		magicSNR = [0 for i in range(NUM_TEST_REPEATS)]
 		magicMAE = [0 for i in range(NUM_TEST_REPEATS)]
-		magicDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
 		magicDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
 
 		for test in range(NUM_TEST_REPEATS):
@@ -184,7 +179,7 @@ for a_idx in range(len(alphas)):
 			magicNMSE[test] = calcNMSE(TstVal, TstValEst)
 			magicSNR[test] = calcSNR(TstVal, TstValEst)
 			magicMAE[test] = calcMAE(TstVal, TstValEst)
-			magicDE1976[test], magicDE2000[test] = deltaE(TstVal, TstValEst, MINLAT, MAXLAT)
+			magicDE2000[test] = deltaE(TstVal, TstValEst, MINLAT, MAXLAT)
 
 
 		with open(resFileNMSE, 'a') as fid:
@@ -198,10 +193,6 @@ for a_idx in range(len(alphas)):
 		with open(resFileMAE, 'a') as fid:
 			fid.write('\n')
 			fid.write('{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}'.format(alpha, beta, np.average(magicMAE), np.std(magicMAE)))
-
-		with open(resFileDE1976, 'a') as fid:
-			fid.write('\n')
-			fid.write('{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}'.format(alpha, beta, np.average(magicDE1976), np.std(magicDE1976)))
 
 		with open(resFileDE2000, 'a') as fid:
 			fid.write('\n')

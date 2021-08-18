@@ -22,6 +22,7 @@ from readLAT import readLAT
 
 
 from utils import *
+from metrics import *
 from const import *
 from magicLAT import *
 
@@ -30,12 +31,17 @@ from quLATiHelper import *
 
 
 """
+To large for my computer:
+p031 = 3
+p032 = 6
+
+Testable:
 p033 = 9
 p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		9
+PATIENT_MAP				=		21
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -109,23 +115,19 @@ sampLst = getModifiedSampList(latVals)
 
 magicNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 magicMAE = [0 for i in range(NUM_TEST_REPEATS)]
-magicDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
-magicDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
+magicDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 gprNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 gprMAE = [0 for i in range(NUM_TEST_REPEATS)]
-gprDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
-gprDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
+gprDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 quLATiNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 quLATiMAE = [0 for i in range(NUM_TEST_REPEATS)]
-quLATiDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
-quLATiDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
+quLATiDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 cotanNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 cotanMAE = [0 for i in range(NUM_TEST_REPEATS)]
-cotanDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
-cotanDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
+cotanDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 # For colorbar ranges
 MINLAT = math.floor(min(allLatVal)/10)*10
@@ -186,31 +188,27 @@ for test in range(NUM_TEST_REPEATS):
 
 	maeCotan = calcMAE(TstVal, latEstcotan[TstIdx])
 
-	dE1976, dE2000 = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
-	dE1976GPR, dE2000GPR = deltaE(TstVal, [latEstGPR[TstIdx]], MINLAT, MAXLAT)
-	dE1976quLATi, dE2000quLATi = deltaE(TstVal, [latEstquLATi[TstIdx]], MINLAT, MAXLAT)
+	dE = deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
+	dEGPR = deltaE(TstVal, latEstGPR[TstIdx], MINLAT, MAXLAT)
+	dEquLATi = deltaE(TstVal, latEstquLATi[TstIdx], MINLAT, MAXLAT)
 
-	dE1976cotan, dE2000cotan = deltaE(TstVal, latEstcotan[TstIdx], MINLAT, MAXLAT)
+	dEcotan = deltaE(TstVal, latEstcotan[TstIdx], MINLAT, MAXLAT)
 
 	magicNMSE[test] = nmse
 	magicMAE[test] = mae
-	magicDE1976[test] = dE1976
-	magicDE2000[test] = dE2000
+	magicDE[test] = dE
 
 	cotanNMSE[test] = nmseCotan
 	cotanMAE[test] = maeCotan
-	cotanDE1976[test] = dE1976cotan
-	cotanDE2000[test] = dE2000cotan
+	cotanDE[test] = dEcotan
 
 	gprNMSE[test] = nmseGPR
 	gprMAE[test] = maeGPR
-	gprDE1976[test] = dE1976GPR
-	gprDE2000[test] = dE2000GPR
+	gprDE[test] = dEGPR
 
 	quLATiNMSE[test] = nmsequLATi
 	quLATiMAE[test] = maequLATi
-	quLATiDE1976[test] = dE1976quLATi
-	quLATiDE2000[test] = dE2000quLATi
+	quLATiDE[test] = dEquLATi
 
 
 filename = os.path.join(outDir, 'p{}_t{:g}_m{:g}_tests{:g}.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
@@ -228,29 +226,25 @@ with open(filename, 'w') as fid:
 	fid.write('MAGIC-LAT Performance\n\n')
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('NMSE', 	np.average(magicNMSE), 	np.std(magicNMSE)))
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('MAE', 	np.average(magicMAE), 	np.std(magicMAE)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-1976', 	np.average(magicDE1976), np.std(magicDE1976)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(magicDE2000), np.std(magicDE2000)))
+	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(magicDE), np.std(magicDE)))
 
 	fid.write('\n\n')
 
 	fid.write('Cotan Performance\n\n')
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('NMSE', 	np.average(cotanNMSE), 	np.std(cotanNMSE)))
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('MAE', 	np.average(cotanMAE), 	np.std(cotanMAE)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-1976', 	np.average(cotanDE1976), np.std(cotanDE1976)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(cotanDE2000), np.std(cotanDE2000)))
+	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(cotanDE), np.std(cotanDE)))
 
 	fid.write('\n\n')
 
 	fid.write('GPR Performance\n\n')
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('NMSE', 	np.average(gprNMSE), 	np.std(gprNMSE)))
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('MAE', 	np.average(gprMAE), 	np.std(gprMAE)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-1976', 	np.average(gprDE1976), np.std(gprDE1976)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(gprDE2000), np.std(gprDE2000)))
+	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(gprDE), np.std(gprDE)))
 
 	fid.write('\n\n')
 
 	fid.write('quLATi Performance\n\n')
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('NMSE', 	np.average(quLATiNMSE), 	np.std(quLATiNMSE)))
 	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('MAE', 	np.average(quLATiMAE), 	np.std(quLATiMAE)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-1976', 	np.average(quLATiDE1976), np.std(quLATiDE1976)))
-	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(quLATiDE2000), np.std(quLATiDE2000)))
+	fid.write('{:<30}{:.4f} +/- {:.4f}\n'.format('DeltaE-2000', 	np.average(quLATiDE), np.std(quLATiDE)))

@@ -105,6 +105,51 @@ def updateEdges(V, E, latTiled, knownV, thresh, returnMidpoints=False):
 		return np.array(newE)
 
 
+def updateFaces(V, F, latTiled, knownV, thresh):
+	newF = []
+
+	# KD Tree to find the nearest known mesh vertex
+	coordKDtree = cKDTree(knownV)
+
+	for tri in F:	# a triangle is a triplet of vertex indices
+
+		v0 = int(tri[0])	# indices of vertices 0, 1, and 2 in triangle
+		v1 = int(tri[1])
+		v2 = int(tri[2])
+
+		lat0 = latTiled[v0]	# lat values (tiled manifold)
+		lat1 = latTiled[v1]
+		lat2 = latTiled[v2]
+
+		# find distance from nearest known point to vertex 0
+		[d0, _] = coordKDtree.query(V[v0, :], k=2)
+		if d0[0] > 0:
+			d0 = d0[0]
+		else:
+			d0 = d0[1]	# first point found may be itself
+		# find distance from nearest known point to vertex 1
+		[d1, _] = coordKDtree.query(V[v1, :], k=2)
+		if d1[0] > 0:
+			d1 = d1[0]
+		else:
+			d1 = d1[1]	# first point found may be itself
+		# find distance from nearest known point to vertex 2
+		[d2, _] = coordKDtree.query(V[v2, :], k=2)
+		if d2[0] > 0:
+			d2 = d2[0]
+		else:
+			d2 = d2[1]	# first point found may be itself
+
+		e_01 = (abs(lat0 - lat1) < thresh) or (d0 > 15) or (d1 > 15)
+		e_12 = (abs(lat1 - lat2) < thresh) or (d1 > 15) or (d2 > 15)
+		e_20 = (abs(lat2 - lat0) < thresh) or (d2 > 15) or (d0 > 15)
+
+		if e_01 and e_12 and e_20:
+			newF.append(tri)
+
+	return np.array(newF, dtype='int')
+
+
 def getUnWeightedAdj(n, edges):
 	""" Computes the binary adjacency matrix """
 	A = np.zeros((n, n))
@@ -205,7 +250,21 @@ def magicLATcotan(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-5, 
 		verIdx = trIdx[i]
 		lat[verIdx] = trLAT[i]
 
-	L, M = robust_laplacian.mesh_laplacian(V, np.array(F, dtype='int'))
+	# NN interpolation of unknown vertices
+	latNN = [0 for i in range(N)]
+	unknownCoord = [COORD[i] for i in range(N) if i not in trIdx]
+	unknownCoord = griddata(np.array(trCoord), np.array(trLAT), np.array(unknownCoord), method='nearest')
+	currIdx = 0
+	for i in range(N):
+		if i not in trIdx:
+			latNN[i] = unknownCoord[currIdx]
+			currIdx += 1
+		else:
+			latNN[i] = lat[i]
+
+	faces = updateFaces(V, F, latNN, trCoord, edgeThreshold)
+
+	L, _ = robust_laplacian.mesh_laplacian(V, faces)
 
 	latEst = np.zeros((N,1))
 
