@@ -41,14 +41,14 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		21
+PATIENT_MAP				=		9
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
 
 NUM_TEST_REPEATS 		= 		20
 
-outDir				 	=		'results_repeated_wip'
+outDir				 	=		'test_cotan_repeated_results'
 
 """ Read the files """
 meshFile = meshNames[PATIENT_MAP]

@@ -38,7 +38,7 @@ NUM_TRAIN_SAMPS 		= 		100
 
 EDGE_THRESHOLD			=		50
 
-outDir				 	=		'results_wip'
+outDir				 	=		'test_results'
 
 """ Read the files """
 meshFile = meshNames[PATIENT_MAP]

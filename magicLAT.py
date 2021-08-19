@@ -166,14 +166,10 @@ def getUnWeightedAdj(n, edges):
 	return A
 
 
-def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=5e-05, beta=1):
+def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-05, beta=1e-3):
 
 	N = len(V)	# number of vertices in the graph
 	M = len(trIdx)			# number of signal samples
-
-	if N > 11000:
-		print('Graph too large!')
-		exit(0)
 
 	IDX = [i for i in range(N)]
 	COORD = [V[i] for i in IDX]
@@ -229,15 +225,10 @@ def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=5e-05, beta
 	return latEst
 
 
-
-def magicLATcotan(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-5, beta=1):
+def magicLATcotan(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-5, beta=1e-3):
 
 	N = len(V)	# number of vertices in the graph
 	M = len(trIdx)			# number of signal samples
-
-	if N > 11000:
-		print('Graph too large!')
-		exit(0)
 
 	IDX = [i for i in range(N)]
 	COORD = [V[i] for i in IDX]

@@ -40,7 +40,7 @@ EDGE_THRESHOLD			=		50
 
 NUM_TEST_REPEATS 		= 		20
 
-outDir				 	=		'results_repeated_wip'
+outDir				 	=		'test_repeated_results'
 
 """ Read the files """
 meshFile = meshNames[PATIENT_MAP]

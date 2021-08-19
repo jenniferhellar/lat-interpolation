@@ -15,7 +15,7 @@ from utils import *
 from calcVisualMetrics import *
 
 
-outDir				 	=		'results_toy'
+outDir				 	=		'test_toy_results'
 if not os.path.isdir(outDir):
 	os.makedirs(outDir)
 

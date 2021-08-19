@@ -1,9 +1,5 @@
 data/
-res_reg/
-results_wip/
-results_repeated_wip/
-results_toy/
-results_plotting/
+*results/
 quLATi/
 
 # Byte-compiled / optimized / DLL files

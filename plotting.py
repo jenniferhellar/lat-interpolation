@@ -10,7 +10,7 @@ from const import *
 
 PATIENT_MAP         =           21
 
-outDir              =           'results_plotting'
+outDir              =           'plotting_results'
 
 meshFile = meshNames[PATIENT_MAP]
 latFile = latNames[PATIENT_MAP]
@@ -31,7 +31,7 @@ mesh = Mesh([vertices, faces])
 mesh.c('grey')
 
 origLatPoints = Points(OrigLatCoords, r=10).cmap('rainbow_r', OrigLatVals, vmin=np.min(OrigLatVals), vmax=np.max(OrigLatVals)).addScalarBar()
-latPoints = Points(allLatVerts, r=10).cmap('rainbow_r', allLatVals, vmin=np.min(allLatVals), vmax=np.max(allLatVals)).addScalarBar()
+latPoints = Points(allLatVerts, r=10).cmap('rainbow_r', allLatVals, vmin=np.min(allLatVals), vmax=np.max(allLatVals)).addScalarBar(c='white')
 
 # pts2 = mesh.points()[:100]
 
@@ -41,37 +41,37 @@ latPoints = Points(allLatVerts, r=10).cmap('rainbow_r', allLatVals, vmin=np.min(
 
 # mesh.interpolateDataFrom(points, N=5).cmap('rainbow').addScalarBar()
 
-show(mesh, origLatPoints, __doc__, axes=9).close()
-show(mesh, latPoints, __doc__, axes=9).close()
+# show(mesh, origLatPoints, __doc__, axes=9).close()
+# show(mesh, latPoints, __doc__, axes=9).close()
 
 # show(mesh, __doc__, axes=9).close()
 
 
 """ Testing various perspectives """
 
-# vplt = Plotter(N=1, axes=0, offscreen=True)
-# elev = 0
-# roll = 0
-# azim = [0, 90, 180, 270]
-# for a in azim:
-# 	vplt.show(mesh, latPoints, azimuth=a, elevation=elev, roll=roll, bg='black')
-# 	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(elev, a)), returnNumpy=False)
-# elev = [-90, 90]
-# roll = 0
-# azim = 0
-# for e in elev:
-# 	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
-# 	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
-# vplt.close()
+vplt = Plotter(N=1, axes=0, offscreen=True)
+elev = 0
+roll = 0
+azim = [0, 90, 180, 270]
+for a in azim:
+	vplt.show(mesh, latPoints, azimuth=a, elevation=elev, roll=roll, bg='black')
+	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(elev, a)), returnNumpy=False)
+elev = [-90, 90]
+roll = 0
+azim = 0
+for e in elev:
+	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
+	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
+vplt.close()
 
-# elev = [-90, 90]
-# roll = 0
-# azim = 0
-# for e in elev:
-# 	vplt = Plotter(N=1, axes=0, offscreen=True)
-# 	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
-# 	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
-# 	vplt.close()
+elev = [-90, 90]
+roll = 0
+azim = 0
+for e in elev:
+	vplt = Plotter(N=1, axes=0, offscreen=True)
+	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
+	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
+	vplt.close()
 
 
 """ Old """
