@@ -40,7 +40,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		9
+PATIENT_MAP				=		3
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50

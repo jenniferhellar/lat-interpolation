@@ -225,7 +225,7 @@ def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-05, beta
 	return latEst
 
 
-def magicLATcotan(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-5, beta=1e-3):
+def magicLATcotan(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-5, beta=1e-2):
 
 	N = len(V)	# number of vertices in the graph
 	M = len(trIdx)			# number of signal samples
