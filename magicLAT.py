@@ -166,7 +166,7 @@ def getUnWeightedAdj(n, edges):
 	return A
 
 
-def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-05, beta=1e-3):
+def magicLATunweighted(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-05, beta=1e-3):
 
 	N = len(V)	# number of vertices in the graph
 	M = len(trIdx)			# number of signal samples
@@ -225,7 +225,7 @@ def magicLAT(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-05, beta
 	return latEst
 
 
-def magicLATcotan(V, F, E, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-5, beta=1e-2):
+def magicLAT(V, F, trIdx, trCoord, trLAT, edgeThreshold=50, alpha=1e-5, beta=1e-2):
 
 	N = len(V)	# number of vertices in the graph
 	M = len(trIdx)			# number of signal samples
