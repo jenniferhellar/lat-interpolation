@@ -99,8 +99,12 @@ def getModifiedSampList(latVals):
 
 	sort_index = np.argsort(np.array(latVals))
 	sortedLATVals = [latVals[i] for i in sort_index]
-	pos = [int(abs(sortedLATVals[i] - max(sortedLATVals))) for i in range(M)]
-	ratio = [(pos[i] / math.gcd(*pos)) for i in range(M)]
+	# pos = [int(abs(sortedLATVals[i] - max(sortedLATVals))) for i in range(M)]
+	pos = [int(sortedLATVals[i] + abs(min(sortedLATVals))) for i in range(M)]
+
+	ratiodiff = [-0.0005*abs(pos[i] - np.average(pos)) ** 2 for i in range(M)]
+	ratio = [int(ratiodiff[i] - min(ratiodiff) + 1) for i in range(M)]
+	print(min(ratio), max(ratio))
 
 	sampLst = []
 	for i in range(M):
@@ -111,6 +115,13 @@ def getModifiedSampList(latVals):
 		for r in range(int(reps)):
 			sampLst.append(idx)
 	# print(sampLst.count(latVals.index(min(latVals))))
+
+	# plt.plot(sortedLATVals, ratio/np.sum(ratio), 'o')
+	# plt.xlabel('LAT Value (ms)')
+	# plt.ylabel('Sampling Probability')
+	# plt.show()
+
+	# exit(0)
 
 	return sampLst
 
@@ -173,9 +184,10 @@ def plotSaveTestPoints(mesh, TstCoord, TstVal,
 
 
 def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst, 
-	azimuth, elev, roll, MINLAT, MAXLAT, outDir, title, filename):
+	azimuth, elev, roll, MINLAT, MAXLAT, outDir, title, filename, ablFile=None):
 
 	vertices = mesh.points()
+	faces = mesh.faces()
 
 	verPoints = Points(latCoords, r=5).cmap('rainbow_r', latVals, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
 	largeVerPoints = Points(latCoords, r=10).cmap('rainbow_r', latVals, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
@@ -192,9 +204,25 @@ def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst,
 	# Plot 2: MAGIC-LAT output signal
 	estPoints = Points(vertices, r=5).cmap('rainbow_r', latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar()
 
-	# mesh.interpolateDataFrom(magicPoints, N=1).cmap('rainbow_r').addScalarBar()
+	coloredMesh = Mesh([vertices, faces])
 
-	vplt.show(mesh, estPoints, largeVerPoints, 'interpolation result', title=title, at=2, interactive=True)
+	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap('rainbow_r', vmin=MINLAT, vmax=MAXLAT).addScalarBar()
+
+	if ablFile != None:
+		ablV = []
+		with open(ablFile, 'r') as fID:
+			for line in fID:
+				lineSplit = line.split(' ')
+				lineSplit = [i.strip() for i in lineSplit if i.strip() != '']
+				x = float(lineSplit[0])
+				y = float(lineSplit[1])
+				z = float(lineSplit[2])
+				ablV.append([x, y, z])
+		ablMesh = Mesh([np.array(ablV), None], c='black')
+		ptNormals = shapes.NormalLines(ablMesh, ratio=2, atCells=False, scale=2)
+		vplt.show(coloredMesh, ptNormals, verPoints, 'interpolation result', title=title, at=2, interactive=True)
+	else:
+		vplt.show(coloredMesh, estPoints, verPoints, 'interpolation result', title=title, at=2, interactive=True)
 	vplt.screenshot(filename=os.path.join(outDir, filename), returnNumpy=False)
 	vplt.close()
 

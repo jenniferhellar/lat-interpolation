@@ -52,3 +52,8 @@ latNames = 		['Patient030_I_LATSpatialData_8-LV-FAM_car.txt',
 'Patient037_I_LATSpatialData_12-LV-SINUS_car.txt',
 'Patient037_I_LATSpatialData_7-RV-FAM-PVC-ONE_car.txt',
 'Patient037_I_LATSpatialData_9-RV-SINUS-VOLTAGE_car.txt']
+
+ablNames =		{'033':'p033AblationPoints.txt',
+'034':'p034AblationPoints.txt',
+'035':'p035AblationPoints.txt',
+'037':'p037AblationPoints.txt'}

@@ -41,7 +41,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		9
+PATIENT_MAP				=		21
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -160,9 +160,9 @@ for test in range(NUM_TEST_REPEATS):
 
 
 	""" MAGIC-LAT estimate """
-	latEst = magicLAT(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
+	latEst = magicLATunweighted(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
 
-	latEstcotan = magicLATcotan(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
+	latEstcotan = magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
 
 	""" GPR estimate """
 	gpr.fit(TrCoord, TrVal)

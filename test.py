@@ -32,7 +32,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		21
+PATIENT_MAP				=		9
 
 NUM_TRAIN_SAMPS 		= 		100
 
@@ -123,7 +123,7 @@ TstVal = [mapLAT[i] for i in TstIdx]
 
 
 """ MAGIC-LAT estimate """
-latEst = magicLAT(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
+latEst = magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
 
 
 """ GPR estimate """
