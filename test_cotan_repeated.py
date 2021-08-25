@@ -41,7 +41,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		21
+PATIENT_MAP				=		14
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -59,6 +59,11 @@ patient = nm[7:10]
 print('Reading files for ' + nm + ' ...\n')
 [vertices, faces] = readMesh(os.path.join(dataDir, meshFile))
 [OrigLatCoords, OrigLatVals] = readLAT(os.path.join(dataDir, latFile))
+
+ablFile = os.path.join(dataDir, ablNames[patient])
+if not os.path.isfile(ablFile):
+	ablFile = None
+	print('No ablation location file available for this patient.\n')
 
 n = len(vertices)
 

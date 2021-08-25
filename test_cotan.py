@@ -40,7 +40,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		14
+PATIENT_MAP				=		9
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -52,11 +52,15 @@ meshFile = meshNames[PATIENT_MAP]
 latFile = latNames[PATIENT_MAP]
 nm = meshFile[0:-5]
 patient = nm[7:10]
-ablFile = os.path.join(dataDir, ablNames[patient])
 
 print('Reading files for ' + nm + ' ...\n')
 [vertices, faces] = readMesh(os.path.join(dataDir, meshFile))
 [OrigLatCoords, OrigLatVals] = readLAT(os.path.join(dataDir, latFile))
+
+ablFile = os.path.join(dataDir, ablNames[patient])
+if not os.path.isfile(ablFile):
+	ablFile = None
+	print('No ablation location file available for this patient.\n')
 
 n = len(vertices)
 
@@ -74,7 +78,7 @@ mesh.c('grey')
 origLatPoints = Points(OrigLatCoords, r=10).cmap('rainbow_r', OrigLatVals, vmin=np.min(OrigLatVals), vmax=np.max(OrigLatVals)).addScalarBar()
 latPoints = Points(allLatCoord, r=10).cmap('rainbow_r', allLatVal, vmin=np.min(allLatVal), vmax=np.max(allLatVal)).addScalarBar()
 
-anomalous = isAnomalous(allLatCoord, allLatVal, k=6, d=5, thresh=50)
+anomalous = isAnomalous(allLatCoord, allLatVal)
 
 numPtsIgnored = np.sum(anomalous)
 
@@ -163,21 +167,21 @@ Figure 0: Ground truth (entire), training points, and MAGIC-LAT (entire)
 """
 plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst, 
 	azimuth, elev, roll, MINLAT, MAXLAT,
-	outDir, title='MAGIC-LAT', filename='magic.png', ablFile=ablFile)
+	outDir, title='MAGIC-LAT', filename='magic', ablFile=ablFile)
 
 """
 Figure 1: Ground truth (entire), training points, and GPR (entire)
 """
 plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstGPR, 
 	azimuth, elev, roll, MINLAT, MAXLAT,
-	outDir, title='GPR', filename='gpr.png', ablFile=ablFile)
+	outDir, title='GPR', filename='gpr', ablFile=ablFile)
 
 """
 Figure 2: Ground truth (entire), training points, and quLATi (entire)
 """
 plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstquLATi, 
 	azimuth, elev, roll, MINLAT, MAXLAT,
-	outDir, title='quLATi', filename='quLATi.png', ablFile=ablFile)
+	outDir, title='quLATi', filename='quLATi', ablFile=ablFile)
 
 # mesh.interpolateDataFrom(pts, N=1).cmap('rainbow_r').addScalarBar()
 
@@ -186,7 +190,7 @@ Figure 2: Ground truth (entire), training points, and quLATi (entire)
 """
 plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstcotan, 
 	azimuth, elev, roll, MINLAT, MAXLAT,
-	outDir, title='MAGIC-LAT (cotan)', filename='magic_cotan.png', ablFile=ablFile)
+	outDir, title='MAGIC-LAT (cotan)', filename='magicCotan', ablFile=ablFile)
 
 
 """
