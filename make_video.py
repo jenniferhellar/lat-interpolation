@@ -139,8 +139,8 @@ if not os.path.isdir(outDir):
 
 """ Figure parameters """
 # For colorbar ranges
-MINLAT = math.floor(min(allLatVal)/10)*10
-MAXLAT = math.ceil(max(allLatVal)/10)*10
+MINLAT = math.floor(min(latVals)/10)*10
+MAXLAT = math.ceil(max(latVals)/10)*10
 
 plt = Plotter(N=1, axes=4, offscreen=True)
 

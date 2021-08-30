@@ -31,7 +31,7 @@ from quLATiHelper import *
 
 
 """
-To large for my computer:
+Too large for my computer:
 p031 = 3
 p032 = 6
 
@@ -41,7 +41,7 @@ p034 = 14
 p035 = 18
 p037 = 21
 """
-PATIENT_MAP				=		14
+PATIENT_MAP				=		9
 
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
@@ -135,8 +135,8 @@ cotanMAE = [0 for i in range(NUM_TEST_REPEATS)]
 cotanDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 # For colorbar ranges
-MINLAT = math.floor(min(allLatVal)/10)*10
-MAXLAT = math.ceil(max(allLatVal)/10)*10
+MINLAT = math.floor(min(latVals)/10)*10
+MAXLAT = math.ceil(max(latVals)/10)*10
 
 for test in range(NUM_TEST_REPEATS):
 	

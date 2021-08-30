@@ -124,8 +124,8 @@ quLATiMAE = [0 for i in range(NUM_TEST_REPEATS)]
 quLATiDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 # For colorbar ranges
-MINLAT = math.floor(min(allLatVal)/10)*10
-MAXLAT = math.ceil(max(allLatVal)/10)*10
+MINLAT = math.floor(min(latVals)/10)*10
+MAXLAT = math.ceil(max(latVals)/10)*10
 
 for test in range(NUM_TEST_REPEATS):
 	

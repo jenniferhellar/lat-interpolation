@@ -144,8 +144,8 @@ latEstquLATi = quLATi(TrIdx, TrVal, vertices, model)
 
 
 # For colorbar ranges
-MINLAT = math.floor(min(allLatVal)/10)*10
-MAXLAT = math.ceil(max(allLatVal)/10)*10
+MINLAT = math.floor(min(latVals)/10)*10
+MAXLAT = math.ceil(max(latVals)/10)*10
 
 elev, azimuth, roll = getPerspective(patient)
 

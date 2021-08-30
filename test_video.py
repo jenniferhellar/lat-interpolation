@@ -7,6 +7,7 @@ import os
 
 import numpy as np
 import math
+import random
 
 from vedo import Plotter, Video, Points, Mesh
 from vedo.pyplot import plot
@@ -109,20 +110,28 @@ cam1 = {'pos': (181, 13.0, 130),
 videoFile2 = os.path.join(outDir, 'p{}_dE.mp4'.format(patient))
 video2 = Video(videoFile2, fps=4, backend='opencv')
 
+# For colorbar ranges
+MINLAT = math.floor(min(latVals)/10)*10
+MAXLAT = math.ceil(max(latVals)/10)*10
+
 x = []
 y = []
 maxDE = 0
 
+tr_i = []
+sampLst = utils.getModifiedSampList(latVals)
+
 for m in range(1, M-1):
 
 	print('adding sample #{:g} of {:g}...'.format(m, M))
+	
+	elem = random.sample(sampLst, 1)[0]
+	tr_i.append(elem)
+	sampLst = [i for i in sampLst if i != elem]	# to prevent repeats
+	tst_i = [i for i in range(M) if i not in tr_i]
 
-	# For colorbar ranges
-	MINLAT = math.floor(min(allLatVal)/10)*10
-	MAXLAT = math.ceil(max(allLatVal)/10)*10
-
-	tr_i = [i for i in range(m)]
-	tst_i = [i for i in range(m, M)]
+	# tr_i = [i for i in range(m)]
+	# tst_i = [i for i in range(m, M)]
 
 	# get vertex indices of labelled/unlabelled nodes
 	TrIdx = sorted(np.take(latIdx, tr_i))

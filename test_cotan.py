@@ -30,7 +30,7 @@ from quLATiHelper import *
 
 
 """
-To large for my computer:
+Too large for my computer:
 p031 = 3
 p032 = 6
 
@@ -157,8 +157,8 @@ latEstquLATi = quLATi(TrIdx, TrVal, vertices, model)
 
 
 # For colorbar ranges
-MINLAT = math.floor(min(allLatVal)/10)*10
-MAXLAT = math.ceil(max(allLatVal)/10)*10
+MINLAT = math.floor(min(latVals)/10)*10
+MAXLAT = math.ceil(max(latVals)/10)*10
 
 elev, azimuth, roll = getPerspective(patient)
 
@@ -221,6 +221,4 @@ with open(os.path.join(outDir, 'metrics.txt'), 'w') as fid:
 	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeCotan, maeGPR, maequLATi))
 
 	fid.write('\nColor-Based\n')
-	# fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Histogram Corr.', np.mean(magic_corr), np.mean(gpr_corr), np.mean(quLATi_corr)))
-	# fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Spatiogram Corr.', np.mean(magic_spatio_corr), np.mean(gpr_spatio_corr), np.mean(quLATi_spatio_corr)))
 	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE-2000', dE, dEcotan, dEGPR, dEquLATi))

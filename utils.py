@@ -215,7 +215,7 @@ def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst,
 
 	if ablFile != None:
 		ablV = []
-		# coordKDtree = cKDTree(vertices)
+		coordKDtree = cKDTree(vertices)
 		with open(ablFile, 'r') as fID:
 			for line in fID:
 				lineSplit = line.split(' ')
@@ -224,11 +224,11 @@ def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst,
 				y = float(lineSplit[1])
 				z = float(lineSplit[2])
 
-				# [_, nearestVer] = coordKDtree.query([x, y, z], k=1)
-				# ablV.append(vertices[nearestVer])
-				ablV.append([x, y, z])
+				[_, nearestVer] = coordKDtree.query([x, y, z], k=1)
+				ablV.append(vertices[nearestVer])
+				# ablV.append([x, y, z])
 		ablPoints = Points(np.array(ablV), r=5, c='black')
-		hollowMesh = Mesh([vertices, faces], c='grey', alpha=0.5)
+		# hollowMesh = Mesh([vertices, faces], c='grey', alpha=0.5)
 		numPlots += 1
 
 	vplt = Plotter(N=numPlots, axes=9, offscreen=True)
@@ -240,7 +240,7 @@ def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst,
 	vplt.show(coloredMesh, verPoints, 'interpolation result', title=title, at=2)
 	# Plot 3: Ablation points
 	if ablFile != None:
-		vplt.show(hollowMesh, ablPoints, 'ablation points', title=title, at=3)		
+		vplt.show(coloredMesh, ablPoints, 'ablation points', title=title, at=3)		
 	vplt.screenshot(filename=os.path.join(outDir, filename+'_front.png'), returnNumpy=False)
 	vplt.close()
 
@@ -254,7 +254,7 @@ def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst,
 	vplt.show(coloredMesh, verPoints, 'interpolation result', title=title, at=2)
 	# Plot 3: Ablation points
 	if ablFile != None:
-		vplt.show(hollowMesh, ablPoints, 'ablation points', title=title, at=3)	
+		vplt.show(coloredMesh, ablPoints, 'ablation points', title=title, at=3)	
 	vplt.screenshot(filename=os.path.join(outDir, filename+'_back.png'), returnNumpy=False)
 	vplt.close()
 
