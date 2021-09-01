@@ -1,59 +1,29 @@
 
 import os
+import platform
 
-# workDir = '/home/jlh24/latInterpolation'
-# dataDir = os.path.join(workDir, 'data/')
+mySys = platform.system()
 
-workDir = 'D:\jhell\git-repos\lat-interpolation'
-dataDir = os.path.join(workDir, 'data')
+if mySys == 'Linux':
+	workDir = '/home/jlh24/latInterpolation'
+elif mySys == 'Windows':
+	workDir = 'D:\jhell\git-repos\lat-interpolation'
+else:
+	print('\nERROR: unknown operating system. Must specify workDir and dataDir in const.py\n')
+	exit(1)
 
-meshNames =		['Patient030_I_MESHData8-LV-FAM.mesh',
-'Patient031_I_MESHData2-2-Rp-PVC-LVFAM.mesh',
-'Patient031_I_MESHData2-PVC-LVFAM.mesh',
-'Patient031_I_MESHData4-SINUS-LVFAM.mesh',
-'Patient032_I_MESHData1-LVFAM--LAT-HYB.mesh',
-'Patient032_I_MESHData2-LVFAM-INITIAL-PVC.mesh',
-'Patient032_I_MESHData4-LVFAM-SINUS.mesh',
-'Patient032_I_MESHData5-RAFAM.mesh',
-'Patient033_I_MESHData3-1-ReRV-FAM-PVC-A---POST-ABL.mesh',
-'Patient033_I_MESHData3-RV-FAM-PVC-A---NORMAL.mesh',
-'Patient033_I_MESHData4-RV-FAM-PVC-A---LAT-HYBRID.mesh',
-'Patient033_I_MESHData5-RA-CS.mesh',
-'Patient034_I_MESHData4-RVFAM--LAT-HYBRID.mesh',
-'Patient034_I_MESHData5-RVFAM-PVC.mesh',
-'Patient034_I_MESHData6-RVFAM-SINUS-VOLTAGE.mesh',
-'Patient035_I_MESHData5-RV-FAM.mesh',
-'Patient035_I_MESHData6-LV-FAM-PVC.mesh',
-'Patient035_I_MESHData7-LAT-HYBRID.mesh',
-'Patient035_I_MESHData8-SINUS.mesh',
-'Patient037_I_MESHData12-LV-SINUS.mesh',
-'Patient037_I_MESHData7-RV-FAM-PVC-ONE.mesh',
-'Patient037_I_MESHData9-RV-SINUS-VOLTAGE.mesh']
+DATADIR = os.path.join(workDir, 'data')
 
-latNames = 		['Patient030_I_LATSpatialData_8-LV-FAM_car.txt',
-'Patient031_I_LATSpatialData_2-2-Rp-PVC-LVFAM_car.txt',
-'Patient031_I_LATSpatialData_2-PVC-LVFAM_car.txt',
-'Patient031_I_LATSpatialData_4-SINUS-LVFAM_car.txt',
-'Patient032_I_LATSpatialData_1-LVFAM--LAT-HYB_car.txt',
-'Patient032_I_LATSpatialData_2-LVFAM-INITIAL-PVC_car.txt',
-'Patient032_I_LATSpatialData_4-LVFAM-SINUS_car.txt',
-'Patient032_I_LATSpatialData_5-RAFAM_car.txt',
-'Patient033_I_LATSpatialData_3-1-ReRV-FAM-PVC-A---POST-ABL_car.txt',
-'Patient033_I_LATSpatialData_3-RV-FAM-PVC-A---NORMAL_car.txt',
-'Patient033_I_LATSpatialData_4-RV-FAM-PVC-A---LAT-HYBRID_car.txt',
-'Patient033_I_LATSpatialData_5-RA-CS_car.txt',
-'Patient034_I_LATSpatialData_4-RVFAM--LAT-HYBRID_car.txt',
-'Patient034_I_LATSpatialData_5-RVFAM-PVC_car.txt',
-'Patient034_I_LATSpatialData_6-RVFAM-SINUS-VOLTAGE_car.txt',
-'Patient035_I_LATSpatialData_5-RV-FAM_car.txt',
-'Patient035_I_LATSpatialData_6-LV-FAM-PVC_car.txt',
-'Patient035_I_LATSpatialData_7-LAT-HYBRID_car.txt',
-'Patient035_I_LATSpatialData_8-SINUS_car.txt',
-'Patient037_I_LATSpatialData_12-LV-SINUS_car.txt',
-'Patient037_I_LATSpatialData_7-RV-FAM-PVC-ONE_car.txt',
-'Patient037_I_LATSpatialData_9-RV-SINUS-VOLTAGE_car.txt']
+DATAFILES = [('Patient031_I_MESHData4-SINUS-LVFAM.mesh', 'Patient031_I_LATSpatialData_4-SINUS-LVFAM_car.txt', 'Patient031_I_AblationData_4.txt'),
+('Patient032_I_MESHData1-LVFAM-LAT-HYB.mesh', 'Patient032_I_LATSpatialData_1-LVFAM-LAT-HYB_car.txt', 'Patient032_I_AblationData_1.txt'),
+('Patient032_I_MESHData2-LVFAM-INITIAL-PVC.mesh', 'Patient032_I_LATSpatialData_2-LVFAM-INITIAL-PVC_car.txt', 'Patient032_I_AblationData_2.txt'),
+('Patient032_I_MESHData4-LVFAM-SINUS.mesh', 'Patient032_I_LATSpatialData_4-LVFAM-SINUS_car.txt', 'Patient032_I_AblationData_4.txt'),
+('Patient033_I_MESHData3-RV-FAM-PVC-A-NORMAL.mesh', 'Patient033_I_LATSpatialData_3-RV-FAM-PVC-A-NORMAL_car.txt', 'Patient033_I_AblationData_3.txt'),
+('Patient033_I_MESHData4-RV-FAM-PVC-A-LAT-HYBRID.mesh', 'Patient033_I_LATSpatialData_4-RV-FAM-PVC-A-LAT-HYBRID_car.txt', 'Patient033_I_AblationData_4.txt'),
+('Patient034_I_MESHData4-RVFAM-LAT-HYBRID.mesh', 'Patient034_I_LATSpatialData_4-RVFAM-LAT-HYBRID_car.txt', 'Patient034_I_AblationData_4.txt'),
+('Patient034_I_MESHData5-RVFAM-PVC.mesh', 'Patient034_I_LATSpatialData_5-RVFAM-PVC_car.txt', 'Patient034_I_AblationData_5.txt'),
+('Patient034_I_MESHData6-RVFAM-SINUS-VOLTAGE.mesh', 'Patient034_I_LATSpatialData_6-RVFAM-SINUS-VOLTAGE_car.txt', 'Patient034_I_AblationData_6.txt'),
+('Patient035_I_MESHData8-SINUS.mesh', 'Patient035_I_LATSpatialData_8-SINUS_car.txt', 'Patient035_I_AblationData_8.txt'),
+('Patient037_I_MESHData12-LV-SINUS.mesh', 'Patient037_I_LATSpatialData_12-LV-SINUS_car.txt', 'Patient037_I_AblationData_12.txt'),
+('Patient037_I_MESHData9-RV-SINUS-VOLTAGE.mesh', 'Patient037_I_LATSpatialData_9-RV-SINUS-VOLTAGE_car.txt', '')]
 
-ablNames =		{'033':'p033AblationPoints.txt',
-'034':'p034AblationPoints.txt',
-'035':'p035AblationPoints.txt',
-'037':'p037AblationPoints.txt'}
