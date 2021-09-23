@@ -41,7 +41,7 @@ import math
 import random
 
 # plotting packages
-from vedo import Mesh
+from vedo import Mesh, Points, Plotter, Point, Text2D
 
 # Gaussian process regression interpolation
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -64,7 +64,7 @@ import quLATiHelper
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
 
-OUTDIR				 	=		'test_results'
+OUTDIR				 	=		'test_worse_results'
 
 
 """ Parse the input for data index argument. """
@@ -142,7 +142,7 @@ if remove_anomalies:
 	elif PATIENT_IDX == 5:
 		anomIdx = [119, 150, 166, 179, 188, 191, 209, 238]
 	elif PATIENT_IDX == 6:
-		anomIdx = [11, 12, 59, 63, 91, 120, 156]
+		anomIdx = [11, 12, 41, 43, 56, 59, 63, 78, 91, 95, 101, 120, 127, 156, 158, 160, 177, 183]
 	anomalous[anomIdx] = 1
 else:
 	anomalous = [0 for i in range(M)]
@@ -200,20 +200,6 @@ latEst = magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
 # exit(0)
 
 
-""" GPR estimate """
-if verbose:
-	print('\tBeginning GPR computation...')
-
-gp_kernel = RBF(length_scale=0.01) + RBF(length_scale=0.1) + RBF(length_scale=1)
-gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
-
-# fit the GPR with training samples
-gpr.fit(TrCoord, TrVal)
-
-# predict the entire signal
-latEstGPR = gpr.predict(vertices, return_std=False)
-
-
 """ quLATi estimate """
 if verbose:
 	print('\tBeginning quLATi computation...')
@@ -233,13 +219,6 @@ if not visualSuppressed:
 		outSubDir, title='MAGIC-LAT', filename='magic', ablFile=ablFile)
 
 	"""
-	Figure 1: Ground truth (entire), training points, and GPR (entire)
-	"""
-	utils.plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstGPR, 
-		azimuth, elev, roll, MINLAT, MAXLAT,
-		outSubDir, title='GPR', filename='gpr', ablFile=ablFile)
-
-	"""
 	Figure 2: Ground truth (entire), training points, and quLATi (entire)
 	"""
 	utils.plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstquLATi, 
@@ -250,19 +229,8 @@ if not visualSuppressed:
 """
 Error metrics
 """
-if verbose:
-	print('\tComputing metrics...')
-
-nmse = metrics.calcNMSE(TstVal, latEst[TstIdx])
-nmseGPR = metrics.calcNMSE(TstVal, latEstGPR[TstIdx])
-nmsequLATi = metrics.calcNMSE(TstVal, latEstquLATi[TstIdx])
-
-mae = metrics.calcMAE(TstVal, latEst[TstIdx])
-maeGPR = metrics.calcMAE(TstVal, latEstGPR[TstIdx])
-maequLATi = metrics.calcMAE(TstVal, latEstquLATi[TstIdx])
 
 dE = metrics.deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
-dEGPR = metrics.deltaE(TstVal, latEstGPR[TstIdx], MINLAT, MAXLAT)
 dEquLATi = metrics.deltaE(TstVal, latEstquLATi[TstIdx], MINLAT, MAXLAT)
 
 if verbose:
@@ -274,10 +242,53 @@ with open(os.path.join(outSubDir, 'metrics.txt'), 'w') as fid:
 	fid.write('{:<20}{:g}/{:g}\n'.format('m', NUM_TRAIN_SAMPS, M))
 	fid.write('{:<20}{:g}\n\n'.format('anomalous', numPtsIgnored))
 
-	fid.write('{:<20}{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR', 'quLATi'))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseGPR, nmsequLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeGPR, maequLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE', dE, dEGPR, dEquLATi))
+	fid.write('{:<20}{:<20}{:<20}\n\n'.format('', 'MAGIC-LAT', 'quLATi'))
+	fid.write('{:<20}{:<20.6f}{:<20.6f}\n'.format('DeltaE', np.mean(dE), np.mean(dEquLATi)))
 
 print('Success.\n')
 print('Results saved to ' + outSubDir + '\n')
+
+# if np.mean(dE) < np.mean(dEquLATi):
+# 	print('\nMAGIC-LAT better this run.  Try again.')
+# 	exit(0)
+
+
+dE = dE.flatten()
+dEquLATi = dEquLATi.flatten()
+
+l = len(TstIdx)
+worseTstIdx = [dE[i] > dEquLATi[i] for i in range(l)]
+print('\nMAGIC-LAT worse for {:g}/{:g} test points'.format(np.sum(worseTstIdx), len(TstIdx)))
+
+worseIdx = [TstIdx[i] for i in range(l) if worseTstIdx[i] > 0]
+worseCoord = [TstCoord[i] for i in range(l) if worseTstIdx[i] > 0]
+worseVal = [latEst[TstIdx][i] for i in range(l) if worseTstIdx[i] > 0]
+quLATiVal = [latEstquLATi[TstIdx][i] for i in range(l) if worseTstIdx[i] > 0]
+
+TrPoints = Points(TrCoord, r=10).cmap('rainbow_r', TrVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+
+vplt = Plotter(N=3, axes=0)
+for i in range(len(TstIdx)):
+	if dE[i] > dEquLATi[i]:
+		idx = TstIdx[i]
+		coord = vertices[idx]
+		val = np.array(latEst[idx]).flatten()[0]
+		quval = latEstquLATi[idx]
+		trueval = TstVal[i]
+
+		print(idx, coord, val, quval)
+
+		testPoint = Point(coord, r=20).cmap('rainbow_r', [trueval], vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+		vplt.show(mesh, TrPoints, testPoint, Text2D(txt='i={:g}, true'.format(idx), pos='top-left', c='white'), bg='black', at = 0, interactive=False)
+
+		testPoint = Point(coord, r=20).cmap('rainbow_r', [val], vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+		vplt.show(mesh, TrPoints, testPoint, Text2D(txt='i={:g}, MAGIC-LAT, dE={:.6f}'.format(idx, dE[i]), pos='top-left', c='white'), bg='black', at = 1)
+
+		testPoint = Point(coord, r=20).cmap('rainbow_r', [quval], vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+		vplt.show(mesh, TrPoints, testPoint, Text2D(txt='i={:g}, quLATi, dE={:.6f}'.format(idx, dEquLATi[i]), pos='top-left', c='white'), bg='black', at = 2, interactive=True)
+
+		vplt.clear(at=0)
+		vplt.clear(at=1)
+		vplt.clear(at=2)
+
+vplt.close()

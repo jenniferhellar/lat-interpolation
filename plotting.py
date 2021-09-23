@@ -1,24 +1,66 @@
+"""
+DATA INDICES:
+	Too large for my laptop:
+		p031 = 0 (4-SINUS LVFAM)
+		p032 = 1 (1-LVFAM LAT HYB), 2 (2-LVFAM INITIAL PVC), 3 (4-LVFAM SINUS)
+		p037 = 10 (12-LV-SINUS)
+
+	Testable:
+		p033 = 4 (3-RV-FAM-PVC-A-NORMAL), 5 (4-RV-FAM-PVC-A-LAT-HYBRID)
+		p034 = 6 (4-RVFAM-LAT-HYBRID), 7 (5-RVFAM-PVC), 8 (6-RVFAM-SINUS-VOLTAGE)
+		p035 = 9 (8-SINUS)
+		p037 = 11 (9-RV-SINUS-VOLTAGE)
+"""
+
+
 from vedo import *
 import numpy as np
 import os
+import argparse
 
 from readMesh import readMesh
 from readLAT import readLAT
 
 from utils import *
-from const import *
+from const import DATADIR, DATAFILES
 
-PATIENT_MAP         =           21
+OUTDIR              =           'plotting_results'
 
-outDir              =           'plotting_results'
+""" Parse the input for data index argument. """
+parser = argparse.ArgumentParser(
+    description='Processes a single mesh file repeatedly for comparison of MAGIC-LAT, GPR, and quLATi performance.')
 
-meshFile = meshNames[PATIENT_MAP]
-latFile = latNames[PATIENT_MAP]
+parser.add_argument('-i', '--idx', required=True, default='11',
+                    help='Data index to process. \
+                    Default: 11')
+
+args = parser.parse_args()
+
+PATIENT_IDX				=		int(vars(args)['idx'])
+
+""" Obtain file names, patient number, mesh id, etc. """
+(meshFile, latFile, ablFile) = DATAFILES[PATIENT_IDX]
 nm = meshFile[0:-5]
 patient = nm[7:10]
+id = latFile.split('_')[3]
 
-[vertices, faces] = readMesh(os.path.join(dataDir, meshFile))
-[OrigLatCoords, OrigLatVals] = readLAT(os.path.join(dataDir, latFile))
+""" Create output directory for this script and subdir for this mesh. """
+outSubDir = os.path.join(OUTDIR, 'p' + patient + '_' + id)
+if not os.path.isdir(OUTDIR):
+	os.makedirs(OUTDIR)
+if not os.path.isdir(outSubDir):
+	os.makedirs(outSubDir)
+
+""" Read the files """
+print('\nProcessing ' + nm + ' ...\n')
+[vertices, faces] = readMesh(os.path.join(DATADIR, meshFile))
+[OrigLatCoords, OrigLatVals] = readLAT(os.path.join(DATADIR, latFile))
+
+if ablFile != '':
+	ablFile = os.path.join(DATADIR, ablFile)
+else:
+	ablFile = None
+	print('No ablation file available for this mesh... continuing...\n')
 
 n = len(vertices)
 mapIdx = [i for i in range(n)]
@@ -42,36 +84,35 @@ latPoints = Points(allLatVerts, r=10).cmap('rainbow_r', allLatVals, vmin=np.min(
 # mesh.interpolateDataFrom(points, N=5).cmap('rainbow').addScalarBar()
 
 # show(mesh, origLatPoints, __doc__, axes=9).close()
-# show(mesh, latPoints, __doc__, axes=9).close()
-
-# show(mesh, __doc__, axes=9).close()
+show(mesh, latPoints, axes=9, bg='black').close()
+exit(0)
 
 
 """ Testing various perspectives """
 
-vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt = Plotter(N=1, axes=0, interactive=True)
 elev = 0
 roll = 0
 azim = [0, 90, 180, 270]
 for a in azim:
 	vplt.show(mesh, latPoints, azimuth=a, elevation=elev, roll=roll, bg='black')
-	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(elev, a)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outSubDir, 'elev{:g}azim{:g}'.format(elev, a)), returnNumpy=False)
 elev = [-90, 90]
 roll = 0
 azim = 0
 for e in elev:
 	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
-	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outSubDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
 vplt.close()
 
-elev = [-90, 90]
-roll = 0
-azim = 0
-for e in elev:
-	vplt = Plotter(N=1, axes=0, offscreen=True)
-	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
-	vplt.screenshot(filename=os.path.join(outDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
-	vplt.close()
+# elev = [-90, 90]
+# roll = 0
+# azim = 0
+# for e in elev:
+# 	vplt = Plotter(N=1, axes=0, offscreen=True)
+# 	vplt.show(mesh, latPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
+# 	vplt.screenshot(filename=os.path.join(outSubDir, 'elev{:g}azim{:g}'.format(e, azim)), returnNumpy=False)
+# 	vplt.close()
 
 
 """ Old """

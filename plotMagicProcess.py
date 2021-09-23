@@ -30,7 +30,6 @@ Requirements:
 	vedo, matplotlib, scikit-learn, scipy, cv2, colour
 	quLATi, robust_laplacian
 """
-from timeit import default_timer as timer
 
 import os
 
@@ -41,11 +40,14 @@ import math
 import random
 
 # plotting packages
-from vedo import Mesh
+from vedo import Mesh, Points, Plotter
 
 # Gaussian process regression interpolation
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
+
+# nearest-neighbor interpolation
+from scipy.interpolate import griddata
 
 # functions to read the files
 from readMesh import readMesh
@@ -55,16 +57,15 @@ from readLAT import readLAT
 import utils
 import metrics
 from const import DATADIR, DATAFILES
-from magicLAT import magicLAT
+import magicLAT
 
 import quLATiHelper
 
 
-
-NUM_TRAIN_SAMPS 		= 		100
+NUM_TRAIN_SAMPS			=		100
 EDGE_THRESHOLD			=		50
 
-OUTDIR				 	=		'test_results'
+OUTDIR				 	=		'plotMagicProcess_results'
 
 
 """ Parse the input for data index argument. """
@@ -74,10 +75,6 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-i', '--idx', required=True, default='11',
                     help='Data index to process. \
                     Default: 11')
-
-parser.add_argument('-a', '--anomalies_removed', required=True, default=1,
-                    help='Remove anomalous points (disable: 0, enable: 1). \
-                    Default: 1')
 
 parser.add_argument('-v', '--verbose', required=False, default=1,
                     help='Verbose output (disable: 0, enable: 1). \
@@ -92,7 +89,6 @@ args = parser.parse_args()
 PATIENT_IDX				=		int(vars(args)['idx'])
 verbose					=		int(vars(args)['verbose'])
 visualSuppressed		=		int(vars(args)['text'])
-remove_anomalies		=		int(vars(args)['anomalies_removed'])
 
 """ Obtain file names, patient number, mesh id, etc. """
 (meshFile, latFile, ablFile) = DATAFILES[PATIENT_IDX]
@@ -119,10 +115,6 @@ else:
 	ablFile = None
 	print('No ablation file available for this mesh... continuing...\n')
 
-""" Pre-process the mesh and LAT samples. """
-mesh = Mesh([vertices, faces])
-mesh.c('grey')
-
 n = len(vertices)
 
 mapIdx = [i for i in range(n)]
@@ -134,18 +126,7 @@ allLatIdx, allLatCoord, allLatVal = utils.mapSamps(mapIdx, mapCoord, OrigLatCoor
 M = len(allLatIdx)
 
 # Identify and exclude anomalous LAT samples
-anomalous = np.zeros(M)
-if remove_anomalies:
-	# anomalous = utils.isAnomalous(allLatCoord, allLatVal)
-	if PATIENT_IDX == 4:
-		anomIdx = [25, 112, 159, 218, 240, 242, 264]
-	elif PATIENT_IDX == 5:
-		anomIdx = [119, 150, 166, 179, 188, 191, 209, 238]
-	elif PATIENT_IDX == 6:
-		anomIdx = [11, 12, 59, 63, 91, 120, 156]
-	anomalous[anomIdx] = 1
-else:
-	anomalous = [0 for i in range(M)]
+anomalous = utils.isAnomalous(allLatCoord, allLatVal)
 
 numPtsIgnored = np.sum(anomalous)
 
@@ -159,11 +140,11 @@ M = len(latIdx)
 MINLAT = math.floor(min(latVals)/10)*10
 MAXLAT = math.ceil(max(latVals)/10)*10
 
+
 # Create partially-sampled signal vector
 mapLAT = [0 for i in range(n)]
 for i in range(M):
 	mapLAT[latIdx[i]] = latVals[i]
-
 
 """ Random train/test split by non-uniform sampling distribution. """
 # list with values repeated proportionally to sampling probability
@@ -188,96 +169,90 @@ TstCoord = [vertices[i] for i in TstIdx]
 TrVal = [mapLAT[i] for i in TrIdx]
 TstVal = [mapLAT[i] for i in TstIdx]
 
+# NN interpolation of unknown vertices
+latNN = [0 for i in range(n)]
+unknownCoord = [vertices[i] for i in range(n) if i not in TrIdx]
+unknownCoord = griddata(np.array(TrCoord), np.array(TrVal), np.array(unknownCoord), method='nearest')
+currIdx = 0
+for i in range(n):
+	if i not in TrIdx:
+		latNN[i] = unknownCoord[currIdx]
+		currIdx += 1
+	else:
+		latNN[i] = mapLAT[i]
 
-""" MAGIC-LAT estimate """
-if verbose:
-	print('\tBeginning MAGIC-LAT computation...')
+updatedFaces = magicLAT.updateFaces(vertices, faces, latNN, TrCoord, EDGE_THRESHOLD)
 
-# start = timer()
-latEst = magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
-# stop = timer()
-# print(stop-start)
-# exit(0)
-
-
-""" GPR estimate """
-if verbose:
-	print('\tBeginning GPR computation...')
-
-gp_kernel = RBF(length_scale=0.01) + RBF(length_scale=0.1) + RBF(length_scale=1)
-gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
-
-# fit the GPR with training samples
-gpr.fit(TrCoord, TrVal)
-
-# predict the entire signal
-latEstGPR = gpr.predict(vertices, return_std=False)
+latEst = magicLAT.magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
 
 
-""" quLATi estimate """
-if verbose:
-	print('\tBeginning quLATi computation...')
+mesh = Mesh([vertices, faces])
+# mesh.backColor('white').lineColor('black').lineWidth(0.25)
+mesh.c('grey')
 
-model = quLATiHelper.quLATiModel(patient, vertices, faces)
-latEstquLATi = quLATiHelper.quLATi(TrIdx, TrVal, vertices, model)
-
-
-if not visualSuppressed:
-	elev, azimuth, roll = utils.getPerspective(patient)
-
-	"""
-	Figure 0: Ground truth (entire), training points, and MAGIC-LAT (entire)
-	"""
-	utils.plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst, 
-		azimuth, elev, roll, MINLAT, MAXLAT,
-		outSubDir, title='MAGIC-LAT', filename='magic', ablFile=ablFile)
-
-	"""
-	Figure 1: Ground truth (entire), training points, and GPR (entire)
-	"""
-	utils.plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstGPR, 
-		azimuth, elev, roll, MINLAT, MAXLAT,
-		outSubDir, title='GPR', filename='gpr', ablFile=ablFile)
-
-	"""
-	Figure 2: Ground truth (entire), training points, and quLATi (entire)
-	"""
-	utils.plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstquLATi, 
-		azimuth, elev, roll, MINLAT, MAXLAT,
-		outSubDir, title='quLATi', filename='quLATi', ablFile=ablFile)
+verPoints = Points(vertices, r=10, c='white')
+origLatPoints = Points(OrigLatCoords, r=10).cmap('rainbow_r', OrigLatVals, vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+allLatPoints = Points(allLatCoord, r=10).cmap('rainbow_r', allLatVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+latPoints = Points(latCoords, r=10).cmap('rainbow_r', latVals, vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+trPoints = Points(TrCoord, r=10).cmap('rainbow_r', TrVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+nnLatPoints = Points(vertices, r=10).cmap('rainbow_r', latNN, vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
+latEstPoints = Points(vertices, r=10).cmap('rainbow_r', latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white')
 
 
-"""
-Error metrics
-"""
-if verbose:
-	print('\tComputing metrics...')
+a = 130
+e = 0
+r = 0
+z = 1
+verPoints = Points(vertices, r=5, c='white')
 
-nmse = metrics.calcNMSE(TstVal, latEst[TstIdx])
-nmseGPR = metrics.calcNMSE(TstVal, latEstGPR[TstIdx])
-nmsequLATi = metrics.calcNMSE(TstVal, latEstquLATi[TstIdx])
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(mesh, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '0_mesh'), returnNumpy=False).close()
 
-mae = metrics.calcMAE(TstVal, latEst[TstIdx])
-maeGPR = metrics.calcMAE(TstVal, latEstGPR[TstIdx])
-maequLATi = metrics.calcMAE(TstVal, latEstquLATi[TstIdx])
+mesh.lineColor('white').lineWidth(1)
+mesh.c('black')
 
-dE = metrics.deltaE(TstVal, latEst[TstIdx], MINLAT, MAXLAT)
-dEGPR = metrics.deltaE(TstVal, latEstGPR[TstIdx], MINLAT, MAXLAT)
-dEquLATi = metrics.deltaE(TstVal, latEstquLATi[TstIdx], MINLAT, MAXLAT)
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(mesh, verPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '1_graph'), returnNumpy=False).close()
 
-if verbose:
-	print('\tWriting to file...')
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(mesh, allLatPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '2_graph_withAllLAT'), returnNumpy=False).close()
 
-with open(os.path.join(outSubDir, 'metrics.txt'), 'w') as fid:
-	fid.write(nm + '\n\n')
-	fid.write('{:<20}{:g}\n'.format('n', n))
-	fid.write('{:<20}{:g}/{:g}\n'.format('m', NUM_TRAIN_SAMPS, M))
-	fid.write('{:<20}{:g}\n\n'.format('anomalous', numPtsIgnored))
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(mesh, trPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '3_graph_withTrLAT'), returnNumpy=False).close()
 
-	fid.write('{:<20}{:<20}{:<20}{:<20}\n\n'.format('Metric', 'MAGIC-LAT', 'GPR', 'quLATi'))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('NMSE', nmse, nmseGPR, nmsequLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('MAE', mae, maeGPR, maequLATi))
-	fid.write('{:<20}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('DeltaE', dE, dEGPR, dEquLATi))
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(mesh, nnLatPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '4_graph_withLATNN'), returnNumpy=False).close()
 
-print('Success.\n')
-print('Results saved to ' + outSubDir + '\n')
+updatedMesh = Mesh([vertices, updatedFaces])
+updatedMesh.lineColor('white').lineWidth(1)
+updatedMesh.c('black')
+updatedMesh.backColor('white')
+
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(updatedMesh, nnLatPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '5_updated_graph_zoomed_withLATNN'), returnNumpy=False).close()
+
+z = 1
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(updatedMesh, trPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '6_updated_graph_withTrLAT'), returnNumpy=False).close()
+
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(updatedMesh, latEstPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '7_updated_graph_withLATest'), returnNumpy=False).close()
+
+coloredMesh = Mesh([vertices, faces])
+coloredMesh.interpolateDataFrom(latEstPoints, N=1).cmap('rainbow_r', vmin=MINLAT, vmax=MAXLAT).addScalarBar()
+
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(coloredMesh, trPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '8_mesh_interpolated_withTrLAT'), returnNumpy=False).close()
+
+vplt = Plotter(N=1, axes=0, offscreen=True)
+vplt.show(coloredMesh, latPoints, azimuth=a, elevation=e, roll=r, bg='black', zoom=z)
+vplt.screenshot(filename=os.path.join(outSubDir, '9_mesh_interpolated_all'), returnNumpy=False).close()

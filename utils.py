@@ -61,6 +61,10 @@ def mapSamps(IDX, COORD, coords, vals):
 
 
 def isAnomalous(allLatCoord, allLatVal, k=6, d=5, thresh=50):
+	"""
+	k - number of neighbors to find (including self)
+	d - radius (in mm) to limit the search
+	"""
 
 	# KD Tree to find the nearest mesh vertex
 	coordKDtree = cKDTree(allLatCoord)

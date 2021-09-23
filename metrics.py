@@ -71,7 +71,7 @@ def calcNRMSE(sig, sigEst):
 	return nRMSE
 
 
-def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cm.rainbow_r):
+def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cm.viridis):
 	norm = Normalize(vmin=MINLAT, vmax=MAXLAT)
 	m = cm.ScalarMappable(norm=norm, cmap=cmap)
 
@@ -90,6 +90,7 @@ def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cm.rainbow_r):
 	estColors = cv2.cvtColor(estColors.astype("float32"), cv2.COLOR_RGB2LAB)
 
 	dE = np.mean(colour.delta_E(trueColors, estColors, method='CIE 2000'))
+	# dE = colour.delta_E(trueColors, estColors, method='CIE 2000')
 
 	return dE
 
