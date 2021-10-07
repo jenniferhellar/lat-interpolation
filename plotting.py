@@ -73,7 +73,11 @@ mesh = Mesh([vertices, faces])
 mesh.c('grey')
 
 origLatPoints = Points(OrigLatCoords, r=10).cmap('rainbow_r', OrigLatVals, vmin=np.min(OrigLatVals), vmax=np.max(OrigLatVals)).addScalarBar()
-latPoints = Points(allLatVerts, r=10).cmap('rainbow_r', allLatVals, vmin=np.min(allLatVals), vmax=np.max(allLatVals)).addScalarBar(c='white')
+# For colorbar ranges
+MINLAT = math.floor(min(allLatVals)/10)*10
+# MAXLAT = math.ceil(max(latVals)/10)*10
+MAXLAT = MINLAT + math.ceil((7/8 * (max(allLatVals) - MINLAT)) / 10)*10
+latPoints = Points(allLatVerts, r=5).cmap('gist_rainbow', allLatVals, vmin=MINLAT, vmax=MAXLAT).addScalarBar(c='white', title='LAT (ms)', size=(30,150))
 
 # pts2 = mesh.points()[:100]
 
@@ -84,7 +88,7 @@ latPoints = Points(allLatVerts, r=10).cmap('rainbow_r', allLatVals, vmin=np.min(
 # mesh.interpolateDataFrom(points, N=5).cmap('rainbow').addScalarBar()
 
 # show(mesh, origLatPoints, __doc__, axes=9).close()
-show(mesh, latPoints, axes=9, bg='black').close()
+show(mesh, latPoints, bg='black').close()
 exit(0)
 
 

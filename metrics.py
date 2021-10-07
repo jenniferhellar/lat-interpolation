@@ -7,6 +7,8 @@ import colour
 
 import matplotlib.pyplot as plt
 
+import cmocean
+
 
 def calcMSE(sig, sigEst):
 	n = len(sig)
@@ -71,7 +73,10 @@ def calcNRMSE(sig, sigEst):
 	return nRMSE
 
 
-def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cm.viridis):
+def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cm.viridis_r):
+# def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cm.twilight):
+# def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cm.gist_rainbow):
+# def deltaE(trueVals, estVals, MINLAT, MAXLAT, cmap=cmocean.cm.oxy):
 	norm = Normalize(vmin=MINLAT, vmax=MAXLAT)
 	m = cm.ScalarMappable(norm=norm, cmap=cmap)
 

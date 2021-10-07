@@ -21,6 +21,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import colour
+import matplotlib.cm as cm
 
 def calcVisualMetrics(outDir, trueFigName, newFigName, idx=0):
 	bins = 16
@@ -163,6 +164,9 @@ outDir				 	=		'test_toy_results'
 if not os.path.isdir(outDir):
 	os.makedirs(outDir)
 
+plot_cmap = cm.gist_rainbow
+de_cmap = cm.gist_rainbow
+
 gridX = 10
 gridY = 10
 mesh = Grid(pos=(0,0,0), sx=gridX, sy=gridY, c='black')
@@ -183,7 +187,7 @@ for [x,y,z] in vertices:
 # mesh.backColor('violet').lineColor('tomato').lineWidth(2)
 
 vplt = Plotter(N=1, axes=0, offscreen=True)
-truePts = Points(vertices, r = 20).cmap('rainbow_r', trueVals, vmin=-100, vmax=100)
+truePts = Points(vertices, r = 20).cmap(plot_cmap, trueVals, vmin=-100, vmax=100)
 vplt.show(mesh, truePts, bg='black')
 vplt.screenshot(filename=os.path.join(outDir, 'true.png'), returnNumpy=False)
 vplt.close()
@@ -191,6 +195,7 @@ vplt.close()
 trueNMSE = metrics.calcNMSE(trueVals, trueVals)
 trueMAE = metrics.calcMAE(trueVals, trueVals)
 trueDE = metrics.deltaE(trueVals, trueVals, -100, 100)
+trueDEviridis = metrics.deltaE(trueVals, trueVals, -100, 100, cmap=de_cmap)
 # (trueCorr, trueSpatio) = calcVisualMetrics(outDir, 'true.png', 'true.png')
 
 greenLineVals = []
@@ -204,7 +209,7 @@ for [x,y,z] in vertices:
 
 
 vplt = Plotter(N=1, axes=0, offscreen=True)
-newGreenPts = Points(vertices, r = 20).cmap('rainbow_r', greenLineVals, vmin=-100, vmax=100)
+newGreenPts = Points(vertices, r = 20).cmap(plot_cmap, greenLineVals, vmin=-100, vmax=100)
 vplt.show(mesh, newGreenPts, bg='black')
 vplt.screenshot(filename=os.path.join(outDir, 'greenLine.png'), returnNumpy=False)
 vplt.close()
@@ -212,6 +217,7 @@ vplt.close()
 greenLineNMSE = metrics.calcNMSE(trueVals, greenLineVals)
 greenLineMAE = metrics.calcMAE(trueVals, greenLineVals)
 greenLineDE = metrics.deltaE(trueVals, greenLineVals, -100, 100)
+greenLineDEviridis = metrics.deltaE(trueVals, greenLineVals, -100, 100, cmap=de_cmap)
 # (greenLineCorr, greenLineSpatio) = calcVisualMetrics(outDir, 'true.png', 'greenLine.png', idx=1)
 
 
@@ -224,7 +230,7 @@ for [x,y,z] in vertices:
 
 
 vplt = Plotter(N=1, axes=0, offscreen=True)
-shiftLinePts = Points(vertices, r = 20).cmap('rainbow_r', shiftLineVals, vmin=-100, vmax=100)
+shiftLinePts = Points(vertices, r = 20).cmap(plot_cmap, shiftLineVals, vmin=-100, vmax=100)
 vplt.show(mesh, shiftLinePts, bg='black')
 vplt.screenshot(filename=os.path.join(outDir, 'shiftLine.png'), returnNumpy=False)
 vplt.close()
@@ -232,16 +238,15 @@ vplt.close()
 shiftLineNMSE = metrics.calcNMSE(trueVals, shiftLineVals)
 shiftLineMAE = metrics.calcMAE(trueVals, shiftLineVals)
 shiftLineDE = metrics.deltaE(trueVals, shiftLineVals, -100, 100)
+shiftLineDEviridis = metrics.deltaE(trueVals, shiftLineVals, -100, 100, cmap=de_cmap)
 # (shiftLineCorr, shiftLineSpatio) = calcVisualMetrics(outDir, 'true.png', 'shiftLine.png', idx=2)
-
-print(trueDE, greenLineDE, shiftLineDE)
 
 with open(os.path.join(outDir, 'metrics.txt'), 'w') as fid:
 	fid.write('{:>65}\n'.format('Metric'))
-	fid.write('{:<10}{:<20}{:<20}{:<20}{:<20}{:<20}\n'.format('', '', 'NMSE', 'MAE', 'DeltaE', 'Histogram Corr.', 'Spatiogram Corr.'))
+	fid.write('{:<10}{:<20}{:<20}{:<20}{:<20}{:<20}\n'.format('', '', 'NMSE', 'MAE', 'DeltaE (viridis)', 'DeltaE (test)'))
 	fid.write('{:<10}{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('Image', 'true.png', 
-		trueNMSE, trueMAE, trueDE, trueCorr, trueSpatio))
+		trueNMSE, trueMAE, trueDE, trueDEviridis))
 	fid.write('{:<10}{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('', 'greenLine.png', 
-		greenLineNMSE, greenLineMAE, greenLineDE, greenLineCorr, greenLineSpatio))
+		greenLineNMSE, greenLineMAE, greenLineDE, greenLineDEviridis))
 	fid.write('{:<10}{:<20}{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}\n'.format('', 'shiftLine.png', 
-		shiftLineNMSE, shiftLineMAE, shiftLineDE, shiftLineCorr, shiftLineSpatio))
+		shiftLineNMSE, shiftLineMAE, shiftLineDE, shiftLineDEviridis))

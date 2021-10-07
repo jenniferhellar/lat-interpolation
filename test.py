@@ -136,13 +136,21 @@ M = len(allLatIdx)
 # Identify and exclude anomalous LAT samples
 anomalous = np.zeros(M)
 if remove_anomalies:
-	# anomalous = utils.isAnomalous(allLatCoord, allLatVal)
+	anomIdx = []	
 	if PATIENT_IDX == 4:
 		anomIdx = [25, 112, 159, 218, 240, 242, 264]
 	elif PATIENT_IDX == 5:
 		anomIdx = [119, 150, 166, 179, 188, 191, 209, 238]
 	elif PATIENT_IDX == 6:
 		anomIdx = [11, 12, 59, 63, 91, 120, 156]
+	elif PATIENT_IDX ==7:
+		anomIdx = [79, 98, 137, 205]
+	elif PATIENT_IDX == 8:
+		anomIdx = [10, 11, 51, 56, 85, 105, 125, 143, 156, 158, 169, 181, 210, 269, 284, 329, 336, 357, 365, 369, 400, 405]
+	elif PATIENT_IDX == 9:
+		anomIdx = [0, 48, 255, 322]
+	else:
+		anomalous = utils.isAnomalous(allLatCoord, allLatVal)
 	anomalous[anomIdx] = 1
 else:
 	anomalous = [0 for i in range(M)]
@@ -158,6 +166,10 @@ M = len(latIdx)
 # For colorbar ranges
 MINLAT = math.floor(min(latVals)/10)*10
 MAXLAT = math.ceil(max(latVals)/10)*10
+if PATIENT_IDX == 4 or PATIENT_IDX == 5 or PATIENT_IDX == 8 or PATIENT_IDX == 9:
+	MAXLAT = MINLAT + math.ceil((3/4 * (max(latVals) - MINLAT)) / 10)*10
+elif PATIENT_IDX == 6 or PATIENT_IDX == 7 or PATIENT_IDX == 11:
+	MAXLAT = MINLAT + math.ceil((7/8 * (max(latVals) - MINLAT)) / 10)*10
 
 # Create partially-sampled signal vector
 mapLAT = [0 for i in range(n)]
@@ -246,7 +258,11 @@ if not visualSuppressed:
 		azimuth, elev, roll, MINLAT, MAXLAT,
 		outSubDir, title='quLATi', filename='quLATi', ablFile=ablFile)
 
+	utils.plotSaveTwoColorMaps(mesh, latEst,
+		azimuth, elev, roll, MINLAT, MAXLAT, outSubDir, 'gist_rainbow', 'viridis_r', filename='raw')
 
+	utils.plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstGPR, latEstquLATi,
+		azimuth, elev, roll, MINLAT, MAXLAT, outSubDir, idx=7, ablFile=ablFile)
 """
 Error metrics
 """

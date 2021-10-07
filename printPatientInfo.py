@@ -15,7 +15,7 @@ fileList = os.listdir(parentFolder)
 carfileList = [x for x in fileList if '_car.txt' in x]
 meshfileList = [x for x in fileList if '.mesh' in x]
 
-print('{:<70}{:<20}{:<20}{:<20}{:<20}\n'.format('file', 'M', 'anomalous', 'm', 'n'))
+print('{:<70}{:<20}{:<20}\n'.format('file', 'n', 'M'))
 for idx in range(len(carfileList)):
 	meshFile = meshfileList[idx]
 	latFile = carfileList[idx]
@@ -32,15 +32,7 @@ for idx in range(len(carfileList)):
 		allLatIdx, allLatCoord, allLatVal = utils.mapSamps(mapIdx, mapCoord, OrigLatCoords, OrigLatVals)
 
 		M = len(allLatIdx)
-		anomalous = [0 for i in range(M)]
-		numPtsIgnored = 0
-		
-		anomalous = utils.isAnomalous(allLatCoord, allLatVal)
-		numPtsIgnored = np.sum(anomalous)
 	else:
 		M = 0
-		numPtsIgnored = 0
 
-	m = M - numPtsIgnored
-
-	print('{:<70}{:<20}{:<20}{:<20}{:<20}'.format(latFile, M, numPtsIgnored, m, n))
+	print('{:<70}{:<20}{:<20}'.format(latFile, n, M))

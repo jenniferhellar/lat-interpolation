@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 
 
 
-def plot_single(fileDir, patient):
+def plot_single(fileDir, patient, id, title):
 
-	meanFile = os.path.join(fileDir, 'p{}_mean.txt'.format(patient))
-	stdFile = os.path.join(fileDir, 'p{}_std.txt'.format(patient))
+	meanFile = os.path.join(fileDir, 'p' + patient + '_' + id + '_mean.txt')
+	stdFile = os.path.join(fileDir, 'p' + patient + '_' + id + '_std.txt')
 
 	m = []
 
@@ -59,7 +59,7 @@ def plot_single(fileDir, patient):
 	# ax.scatter(m, quLATiMean)
 
 	ax.grid(True)
-	ax.set_title(r'$\Delta$E* vs m, Patient ' + patient, size='18')
+	ax.set_title(r'$\Delta$E* vs m, ' + title, size='18')
 	ax.set_xlabel('m', size=14)
 	plt.xticks(m[1:], m[1:], rotation = 'vertical', size=12)
 	plt.yticks(size=12)
@@ -69,6 +69,9 @@ def plot_single(fileDir, patient):
 	plt.show()
 
 fileDir = 'test_varied_m_results'
-patient = '037'
+patient = '034'
+id = '4'
 
-plot_single(fileDir, patient)
+title='Map 2 (Patient B)'
+
+plot_single(fileDir, patient, id, title)

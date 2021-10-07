@@ -13,7 +13,7 @@ DATA INDICES:
 		p035 = 9 (8-SINUS)
 		p037 = 11 (9-RV-SINUS-VOLTAGE)
 
-Requirements: numpy, scipy, matplotlib, scikit-learn
+Requirements: 
 """
 
 import os
@@ -55,7 +55,7 @@ parser.add_argument('-i', '--idx', required=True, default='11',
                     help='Data index to process. \
                     Default: 11')
 
-parser.add_argument('-a', '--anomalies_removed', required=True, default=1,
+parser.add_argument('-a', '--anomalies_removed', required=False, default=1,
                     help='Remove anomalous points (disable: 0, enable: 1). \
                     Default: 1')
 
@@ -118,6 +118,12 @@ if remove_anomalies:
 		anomIdx = [119, 150, 166, 179, 188, 191, 209, 238]
 	elif PATIENT_IDX == 6:
 		anomIdx = [11, 12, 59, 63, 91, 120, 156]
+	elif PATIENT_IDX ==7:
+		anomIdx = [79, 98, 137, 205]
+	elif PATIENT_IDX == 8:
+		anomIdx = [10, 11, 51, 56, 85, 105, 125, 143, 156, 158, 169, 181, 210, 269, 284, 329, 336, 357, 365, 369, 400, 405]
+	elif PATIENT_IDX == 9:
+		anomIdx = [0, 48, 255, 322]
 	else:
 		anomalous = utils.isAnomalous(allLatCoord, allLatVal)
 	anomalous[anomIdx] = 1
@@ -133,8 +139,8 @@ latVals = [allLatVal[i] for i in range(M) if anomalous[i] == 0]
 M = len(latIdx)
 
 # For colorbar ranges
-MINLAT = math.floor(min(latVals)/10)*10
-MAXLAT = math.ceil(max(latVals)/10)*10
+MINLAT = min(latVals)
+MAXLAT = max(latVals)
 
 # Create partially-sampled signal vector
 mapLAT = [0 for i in range(n)]

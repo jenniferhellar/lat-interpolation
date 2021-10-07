@@ -102,12 +102,21 @@ MAXLAT = math.ceil(max(allLatVal)/10)*10
 
 # Identify and exclude anomalous LAT samples
 anomalous = np.zeros(M)
+anomIdx = []	
 if PATIENT_IDX == 4:
 	anomIdx = [25, 112, 159, 218, 240, 242, 264]
 elif PATIENT_IDX == 5:
 	anomIdx = [119, 150, 166, 179, 188, 191, 209, 238]
 elif PATIENT_IDX == 6:
-	anomIdx = [59, 63, 120, 156, 158, 177, 183]
+	anomIdx = [11, 12, 59, 63, 91, 120, 156]
+elif PATIENT_IDX == 7:
+	anomIdx = [79, 98, 137, 205]
+elif PATIENT_IDX == 8:
+	anomIdx = [10, 11, 51, 56, 85, 105, 125, 143, 156, 158, 169, 181, 210, 269, 284, 329, 336, 357, 365, 369, 405]
+elif PATIENT_IDX == 9:
+	anomIdx = [0, 48, 255, 322, 326]
+else:
+	anomalous = utils.isAnomalous(allLatCoord, allLatVal)
 anomalous[anomIdx] = 1
 
 numPtsIgnored = np.sum(anomalous)

@@ -1,9 +1,24 @@
 
 """
-Requirements: numpy, scipy, matplotlib, scikit-learn
+
+DATA INDICES:
+	Too large for my laptop:
+		p031 = 0 (4-SINUS LVFAM)
+		p032 = 1 (1-LVFAM LAT HYB), 2 (2-LVFAM INITIAL PVC), 3 (4-LVFAM SINUS)
+		p037 = 10 (12-LV-SINUS)
+
+	Testable:
+		p033 = 4 (3-RV-FAM-PVC-A-NORMAL), 5 (4-RV-FAM-PVC-A-LAT-HYBRID)
+		p034 = 6 (4-RVFAM-LAT-HYBRID), 7 (5-RVFAM-PVC), 8 (6-RVFAM-SINUS-VOLTAGE)
+		p035 = 9 (8-SINUS)
+		p037 = 11 (9-RV-SINUS-VOLTAGE)
+
+Requirements: 
 """
 
 import os
+
+import argparse
 
 import numpy as np
 import math
@@ -18,59 +33,105 @@ from readMesh import readMesh
 from readLAT import readLAT
 
 
-# from utils import *
 import utils
-# from metrics import *
 import metrics
-from const import *
+from const import DATADIR, DATAFILES
 from magicLAT import magicLAT
 
-# from quLATiHelper import *
 import quLATiHelper
 
 
 
-"""
-To large for my computer:
-p031 = 3
-p032 = 6
-
-Testable:
-p033 = 9
-p034 = 14
-p035 = 18
-p037 = 21
-"""
-PATIENT_MAP				=		14
 
 EDGE_THRESHOLD			=		50
 
-NUM_TEST_REPEATS 		= 		20
+OUTDIR				 	=		'test_varied_m_results'
 
 m						=		[25, 50, 75, 100, 125, 150, 175, 200, 225, 250]
 
-outDir				 	=		'test_varied_m_results'
+""" Parse the input for data index argument. """
+parser = argparse.ArgumentParser(
+    description='Processes a single mesh file repeatedly for comparison of MAGIC-LAT, GPR, and quLATi performance.')
 
-""" Read the files """
-meshFile = meshNames[PATIENT_MAP]
-latFile = latNames[PATIENT_MAP]
+parser.add_argument('-i', '--idx', required=True, default='11',
+                    help='Data index to process. \
+                    Default: 11')
+
+parser.add_argument('-a', '--anomalies_removed', required=False, default=1,
+                    help='Remove anomalous points (disable: 0, enable: 1). \
+                    Default: 1')
+
+parser.add_argument('-r', '--repeat', required=True, default=25,
+                    help='Number of test repetitions. \
+                    Default: 25')
+
+parser.add_argument('-v', '--verbose', required=False, default=1,
+                    help='Verbose output (disable: 0, enable: 1). \
+                    Default: 1')
+
+args = parser.parse_args()
+
+PATIENT_IDX				=		int(vars(args)['idx'])
+NUM_TEST_REPEATS		=		int(vars(args)['repeat'])
+verbose					=		int(vars(args)['verbose'])
+remove_anomalies		=		int(vars(args)['anomalies_removed'])
+
+""" Obtain file names, patient number, mesh id, etc. """
+(meshFile, latFile, ablFile) = DATAFILES[PATIENT_IDX]
+
 nm = meshFile[0:-5]
 patient = nm[7:10]
+id = latFile.split('_')[3]
 
-print('Reading files for ' + nm + ' ...\n')
-[vertices, faces] = readMesh(os.path.join(dataDir, meshFile))
-[OrigLatCoords, OrigLatVals] = readLAT(os.path.join(dataDir, latFile))
+""" Create output directory for this script and subdir for this mesh. """
+if not os.path.isdir(OUTDIR):
+	os.makedirs(OUTDIR)
 
+""" Read the files """
+print('\nProcessing ' + nm + ' ...\n')
+[vertices, faces] = readMesh(os.path.join(DATADIR, meshFile))
+[OrigLatCoords, OrigLatVals] = readLAT(os.path.join(DATADIR, latFile))
+
+if ablFile != '':
+	ablFile = os.path.join(DATADIR, ablFile)
+else:
+	ablFile = None
+	print('No ablation file available for this mesh... continuing...\n')
+
+""" Pre-process the mesh and LAT samples. """
 n = len(vertices)
 
 mapIdx = [i for i in range(n)]
 mapCoord = [vertices[i] for i in mapIdx]
 
+# Map the LAT samples to nearest mesh vertices
 allLatIdx, allLatCoord, allLatVal = utils.mapSamps(mapIdx, mapCoord, OrigLatCoords, OrigLatVals)
 
 M = len(allLatIdx)
 
-anomalous = utils.isAnomalous(allLatCoord, allLatVal, k=6, d=5, thresh=50)
+# Identify and exclude anomalous LAT samples
+anomalous = np.zeros(M)
+if remove_anomalies:
+	anomIdx = []	
+	if PATIENT_IDX == 4:
+		anomIdx = [25, 112, 159, 218, 240, 242, 264]
+	elif PATIENT_IDX == 5:
+		anomIdx = [119, 150, 166, 179, 188, 191, 209, 238]
+	elif PATIENT_IDX == 6:
+		anomIdx = [11, 12, 59, 63, 91, 120, 156]
+	elif PATIENT_IDX ==7:
+		anomIdx = [79, 98, 137, 205]
+	elif PATIENT_IDX == 8:
+		anomIdx = [10, 11, 51, 56, 85, 105, 125, 143, 156, 158, 169, 181, 210, 269, 284, 329, 336, 357, 365, 369, 400, 405]
+	elif PATIENT_IDX == 9:
+		anomIdx = [0, 48, 255, 322]
+	else:
+		anomalous = utils.isAnomalous(allLatCoord, allLatVal)
+	anomalous[anomIdx] = 1
+else:
+	anomalous = [0 for i in range(M)]
+
+numPtsIgnored = np.sum(anomalous)
 
 latIdx = [allLatIdx[i] for i in range(M) if anomalous[i] == 0]
 latCoords = [allLatCoord[i] for i in range(M) if anomalous[i] == 0]
@@ -78,16 +139,27 @@ latVals = [allLatVal[i] for i in range(M) if anomalous[i] == 0]
 
 M = len(latIdx)
 
+# For colorbar ranges
+MINLAT = min(latVals)
+MAXLAT = max(latVals)
+
+# Create partially-sampled signal vector
 mapLAT = [0 for i in range(n)]
 for i in range(M):
 	mapLAT[latIdx[i]] = latVals[i]
 
-if not os.path.isdir(outDir):
-	os.makedirs(outDir)
+""" Create GPR kernel and regressor """
+gp_kernel = RBF(length_scale=0.01) + RBF(length_scale=0.1) + RBF(length_scale=1)
+gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
 
-infoFile = os.path.join(outDir, 'p{}_info.txt'.format(patient))
-meanFile = os.path.join(outDir, 'p{}_mean.txt'.format(patient))
-stdFile = os.path.join(outDir, 'p{}_std.txt'.format(patient))
+"""
+Create the quLATi model
+"""
+model = quLATiHelper.quLATiModel(patient, vertices, faces)
+
+infoFile = os.path.join(OUTDIR, 'p' + patient + '_' + id.split('-')[0] + '_info.txt')
+meanFile = os.path.join(OUTDIR, 'p' + patient + '_' + id.split('-')[0] + '_mean.txt')
+stdFile = os.path.join(OUTDIR, 'p' + patient + '_' + id.split('-')[0] + '_std.txt')
 
 with open(infoFile, 'w') as fid:
 	fid.write('{:<30}{}\n'.format('file', nm))
@@ -104,21 +176,9 @@ with open(meanFile, 'w') as fid:
 with open(stdFile, 'w') as fid:
 	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('m', 'MAGIC-LAT', 'GPR', 'quLATi'))
 
-""" Create GPR kernel and regressor """
-gp_kernel = RBF(length_scale=0.01) + RBF(length_scale=0.1) + RBF(length_scale=1)
-gpr = GaussianProcessRegressor(kernel=gp_kernel, normalize_y=True)
-
-"""
-Create the quLATi model
-"""
-model = quLATiHelper.quLATiModel(patient, vertices, faces)
-
-""" Sampling """
+""" Random train/test split by non-uniform sampling distribution. """
+# list with values repeated proportionally to sampling probability
 sampLst = utils.getModifiedSampList(latVals)
-
-# For colorbar ranges
-MINLAT = math.floor(min(latVals)/10)*10
-MAXLAT = math.ceil(max(latVals)/10)*10
 
 for i in range(len(m)):
 
