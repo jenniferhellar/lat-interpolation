@@ -109,15 +109,9 @@ def getModifiedSampList(latVals):
 
 	sort_index = np.argsort(np.array(latVals))
 	sortedLATVals = [latVals[i] for i in sort_index]
-	# pos = [int(abs(sortedLATVals[i] - max(sortedLATVals))) for i in range(M)]
 	pos = [int(sortedLATVals[i] + abs(min(sortedLATVals))) for i in range(M)]
 
-	# ratiodiff = [-0.01*abs(pos[i] - np.average(pos)) ** 2 for i in range(M)]
-	# ratio = [int(ratiodiff[i] - min(ratiodiff) + 1) for i in range(M)]
-	# print(min(ratio), max(ratio))
-
 	centerProb = (np.average(pos)-0.5*(np.average(pos)-np.min(pos)))
-	# ratiodiff = [abs(pos[i] - (np.average(pos)-np.std(pos))) for i in range(M)]
 	ratiodiff = [abs(pos[i] - centerProb) for i in range(M)]
 	ratio = [max(ratiodiff) - 0.25*ratiodiff[i] for i in range(M)]
 	ratio = ratio - (min(ratio) - 1)
@@ -134,10 +128,17 @@ def getModifiedSampList(latVals):
 
 	# print(np.sum(ratio), len(sampLst))
 
-	# plt.plot(sortedLATVals, ratio/np.sum(ratio), 'o')
-	# # plt.plot(sortedLATVals, ratio, 'o')
-	# plt.xlabel('LAT Value (ms)')
-	# plt.ylabel('Sampling Probability')
+	# fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(10,8))
+
+	# ax.plot(sortedLATVals, ratio/np.sum(ratio), 'ok')
+
+	# ax.set_title('Sampling probability versus LAT observation value', fontsize=18)
+	# ax.set_xlabel('LAT Value (ms)', fontsize=16)
+	# ax.set_ylabel('Sampling Probability', fontsize=16)
+	# ax.tick_params(axis="x", labelsize=14)
+	# ax.tick_params(axis="y", labelsize=14)
+	# plt.grid()
+
 	# plt.show()
 
 	# exit(0)

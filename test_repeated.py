@@ -17,6 +17,7 @@ Requirements:
 """
 
 import os
+from timeit import default_timer as timer
 
 import argparse
 
@@ -175,7 +176,7 @@ quLATiDE = [0 for i in range(NUM_TEST_REPEATS)]
 
 for test in range(NUM_TEST_REPEATS):
 	
-	print('\ttest #{:g} of {:g}.'.format(test + 1, NUM_TEST_REPEATS))
+	# print('\ttest #{:g} of {:g}.'.format(test + 1, NUM_TEST_REPEATS))
 
 	samps = sampLst
 
@@ -200,7 +201,10 @@ for test in range(NUM_TEST_REPEATS):
 
 
 	""" MAGIC-LAT estimate """
+	# start = timer()
 	latEst = magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
+	# stop = timer()
+	# print(stop-start)
 
 	""" GPR estimate """
 	gpr.fit(TrCoord, TrVal)

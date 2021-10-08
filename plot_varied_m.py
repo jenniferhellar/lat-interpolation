@@ -3,6 +3,8 @@ import os
 # plotting packages
 import matplotlib.pyplot as plt
 
+import math
+
 
 
 def plot_single(fileDir, patient, id, title):
@@ -41,10 +43,10 @@ def plot_single(fileDir, patient, id, title):
 			gprStd.append(2*float(lineSplit[2]))
 			quLATiStd.append(2*float(lineSplit[3]))
 
-	leg = ['GPR', 'quLATi', 'MAGIC-LAT']
+	leg = ['GPR', 'GPMI', 'MAGIC-LAT']
 
 	# beta on the x-axis, one line per alpha value
-	fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(16,8))
+	fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(10,8))
 	ax.plot(m[1:], gprMean[1:], 's-')
 	ax.plot(m[1:], quLATiMean[1:], '^-')
 	ax.plot(m[1:], magicMean[1:], 'D-')
@@ -62,6 +64,9 @@ def plot_single(fileDir, patient, id, title):
 	ax.set_title(r'$\Delta$E* vs m, ' + title, size='18')
 	ax.set_xlabel('m', size=14)
 	plt.xticks(m[1:], m[1:], rotation = 'vertical', size=12)
+
+	ymax = math.ceil(max(max(gprMean), max(quLATiMean), max(magicMean))/5)*5
+	plt.ylim((0, 20))
 	plt.yticks(size=12)
 	ax.set_ylabel(r'$\Delta$E*', size=14)
 	ax.legend(leg, fontsize=14)
@@ -69,9 +74,23 @@ def plot_single(fileDir, patient, id, title):
 	plt.show()
 
 fileDir = 'test_varied_m_results'
-patient = '034'
-id = '4'
 
-title='Map 2 (Patient B)'
+PATIENT_IDX = 11
+
+if PATIENT_IDX == 4:
+	patient, id, title = ('033', '3', 'Map 0 (Patient A)')
+elif PATIENT_IDX == 5:
+	patient, id, title = ('033', '4', 'Map 1 (Patient A)')
+elif PATIENT_IDX == 6:
+	patient, id, title = ('034', '4', 'Map 2 (Patient B)')
+elif PATIENT_IDX == 7:
+	patient, id, title = ('034', '5', 'Map 3 (Patient B)')
+elif PATIENT_IDX == 8:
+	patient, id, title = ('034', '6', 'Map 4 (Patient B)')
+elif PATIENT_IDX == 9:
+	patient, id, title = ('035', '8', 'Map 5 (Patient C)')
+elif PATIENT_IDX == 11:
+	patient, id, title = ('037', '9', 'Map 6 (Patient D)')
+
 
 plot_single(fileDir, patient, id, title)
