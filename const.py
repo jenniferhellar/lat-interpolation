@@ -1,3 +1,18 @@
+"""
+--------------------------------------------------------------------------------
+Constant definitions for MAGIC-LAT.
+--------------------------------------------------------------------------------
+
+Description: Constants definition for paths to data directories/files..
+
+Requirements: os, platform
+
+File: const.py
+
+Author: Jennifer Hellar
+Email: jenniferhellar@gmail.com
+--------------------------------------------------------------------------------
+"""
 
 import os
 import platform

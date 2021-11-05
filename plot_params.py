@@ -1,5 +1,20 @@
-import os
+"""
+--------------------------------------------------------------------------------
+Plots results for cross-validation over regularization parameters.
+--------------------------------------------------------------------------------
 
+Description: Plots output of params.py
+
+Requirements: os, numpy, matplotlib
+
+File: plot_params.py
+
+Author: Jennifer Hellar
+Email: jenniferhellar@gmail.com
+--------------------------------------------------------------------------------
+"""
+
+import os
 import numpy as np
 
 # plotting packages
@@ -8,6 +23,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_single(fileDir, fileName):
+	""" Plots result for a single patient/map. """
 	alphas = []
 	betas = []
 
@@ -62,6 +78,7 @@ def plot_single(fileDir, fileName):
 
 
 def plot_average(fileDir, fileNames):
+	""" Plots average across patients. """
 
 	alphas = [0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]
 	betas = [0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]
@@ -114,8 +131,7 @@ def plot_average(fileDir, fileNames):
 	plt.show()
 
 
-# fileDir = 'params_results'
-fileDir = 'params_cotan_results'
+fileDir = 'params_results'
 fileName = 'p033_t50_m100_r20_de2000.txt'
 # fileName = 'p034_t50_m100_r20_de2000.txt'
 # fileName = 'p035_t50_m100_r20_de2000.txt'

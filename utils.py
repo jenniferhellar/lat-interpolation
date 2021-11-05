@@ -113,8 +113,8 @@ def getModifiedSampList(latVals):
 
 	centerProb = (np.average(pos)-0.5*(np.average(pos)-np.min(pos)))
 	ratiodiff = [abs(pos[i] - centerProb) for i in range(M)]
-	ratio = [max(ratiodiff) - 0.25*ratiodiff[i] for i in range(M)]
-	ratio = ratio - (min(ratio) - 1)
+
+	ratio = [0.25*(max(ratiodiff) - ratiodiff[i])+1 for i in range(M)]
 	ratio = [int(i) for i in ratio]
 	# print(min(ratio), max(ratio))
 
@@ -124,9 +124,9 @@ def getModifiedSampList(latVals):
 		idx = sort_index[i]
 		for r in range(reps):
 			sampLst.append(idx)
-	# print(sampLst.count(latVals.index(min(latVals))))
+	# # print(sampLst.count(latVals.index(min(latVals))))
 
-	# print(np.sum(ratio), len(sampLst))
+	# # print(np.sum(ratio), len(sampLst))
 
 	# fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(10,8))
 
@@ -143,68 +143,43 @@ def getModifiedSampList(latVals):
 
 	# exit(0)
 
+	# fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(10,8))
+	# plt.hist(latVals, bins=16, color='grey', edgecolor='k', alpha=0.65)
+	# # plt.axvline(np.median(latVals), color='k', linestyle='dashed', linewidth=1)
+	# # min_ylim, max_ylim = plt.ylim()
+	# # plt.text(np.median(latVals)*0.95, max_ylim*0.9, 'Median: {:.2f}'.format(np.median(latVals)))
+
+	# plt.axvline(np.mean(latVals), color='k', linestyle='dashed', linewidth=1)
+	# min_ylim, max_ylim = plt.ylim()
+	# plt.text(np.mean(latVals)*0.95, max_ylim*0.9, 'Mean: {:.2f}'.format(np.mean(latVals)))
+
+	# plt.axvline(np.min(latVals), color='k', linestyle='dashed', linewidth=1)
+	# min_ylim, max_ylim = plt.ylim()
+	# plt.text(np.min(latVals)*0.95, max_ylim*0.9, 'Min: {:.2f}'.format(np.min(latVals)))
+
+	# plt.axvline(np.min(latVals) + 0.5*abs(np.mean(latVals)-np.min(latVals)), color='k', linestyle='dashed', linewidth=1)
+	# min_ylim, max_ylim = plt.ylim()
+	# plt.text((np.min(latVals) + 0.5*abs(np.mean(latVals)-np.min(latVals)))*0.95, max_ylim*0.9, 's\': {:.2f}'.format(np.min(latVals) + 0.5*abs(np.mean(latVals)-np.min(latVals))))
+	
+	# ax.set_title('Histogram of LAT observation values', fontsize=18)
+	# ax.set_xlabel('LAT Value (ms)', fontsize=16)
+	# ax.set_ylabel('Occurrence Frequency', fontsize=16)
+	# ax.tick_params(axis="x", labelsize=14)
+	# ax.tick_params(axis="y", labelsize=14)
+	# # plt.grid()
+	# plt.show()
+	# exit(0)
+
 	return sampLst
-
-
-def createTestPointImages(vertices, faces, MINLAT, MAXLAT, outDir,
-	coords, trueVals, magicVals, gprVals=[], quLATiVals=[]):
-
-	mesh = Mesh([vertices, faces], c='black')
-
-	"""
-	Ground truth (test points only)
-	"""
-	plotSaveTestPoints(mesh, coords, trueVals,
-		MINLAT, MAXLAT, outDir, fileprefix='true')
-
-	"""
-	MAGIC-LAT estimate (test points only)
-	"""
-	plotSaveTestPoints(mesh, coords, magicVals,
-		MINLAT, MAXLAT, outDir, fileprefix='magic')
-
-	"""
-	GPR estimate (test points only)
-	"""
-	if len(gprVals) > 0:
-		plotSaveTestPoints(mesh, coords, gprVals,
-			MINLAT, MAXLAT, outDir, fileprefix='gpr')
-
-	"""
-	quLATi estimate (test points only)
-	"""
-	if len(quLATiVals) > 0:
-		plotSaveTestPoints(mesh, coords, quLATiVals,
-			MINLAT, MAXLAT, outDir, fileprefix='quLATi')
-
-
-def plotSaveTestPoints(mesh, TstCoord, TstVal,
-	MINLAT, MAXLAT, outDir, fileprefix):
-
-	# vplt = Plotter(N=1, axes=0, offscreen=True)
-	testPoints = Points(TstCoord, r=20).cmap('rainbow_r', TstVal, vmin=MINLAT, vmax=MAXLAT)
-
-	elev = 0
-	roll = 0
-	azim = [0, 90, 180, 270]
-	for a in azim:
-		vplt = Plotter(N=1, axes=0, offscreen=True)
-		vplt.show(mesh, testPoints, azimuth=a, elevation=elev, roll=roll, bg='black')
-		vplt.screenshot(filename=os.path.join(outDir, fileprefix+'_elev{:g}azim{:g}.png'.format(elev, a)), returnNumpy=False)
-		vplt.close()
-
-	elev = [-90, 90]
-	roll = 0
-	azim = 0
-	for e in elev:
-		vplt = Plotter(N=1, axes=0, offscreen=True)
-		vplt.show(mesh, testPoints, azimuth=azim, elevation=e, roll=roll, bg='black')
-		vplt.screenshot(filename=os.path.join(outDir, fileprefix+'_elev{:g}azim{:g}.png'.format(e, azim)), returnNumpy=False)
-		vplt.close()
 
 
 def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst, 
 	a, e, r, MINLAT, MAXLAT, outDir, title, filename, ablFile=None):
+	"""
+	Plots and saves interpolation result in two figures (anterior and posterior) 
+	with subfigures for ground truth, training points, interpolation
+	w/ground truth, and interpolation w/ablations.
+	"""
 
 	# colormap = 'viridis_r'
 	colormap = 'gist_rainbow'
@@ -270,8 +245,13 @@ def plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst,
 	vplt.screenshot(filename=os.path.join(outDir, filename+'_back.png'), returnNumpy=False)
 	vplt.close()
 
+
+
 def plotSaveTwoColorMaps(mesh, latEst,
 	a, e, r, MINLAT, MAXLAT, outDir, cmap1, cmap2, filename):
+	"""
+	Plots and saves the same interpolation result with two colormaps for comparison.
+	"""
 
 	vertices = mesh.points()
 	faces = mesh.faces()
@@ -296,8 +276,13 @@ def plotSaveTwoColorMaps(mesh, latEst,
 	vplt.close()
 
 
+
 def plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstGPR, latEstqulati,
 	a, e, r, MINLAT, MAXLAT, outDir, idx, ablFile=None):
+	"""
+	Plots and saves individual figures for all interpolation results, anterior and posterior
+	perspectives, with ground truth and ablation points for comparison.
+	"""
 
 	vertices = mesh.points()
 	faces = mesh.faces()
@@ -326,20 +311,23 @@ def plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstG
 	verPoints = Points(latCoords, r=r).cmap(colormap, latVals, vmin=MINLAT, vmax=MAXLAT)
 	trainPoints = Points(TrCoord, r=r).cmap(colormap, TrVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 
+	# Training points (anterior view)
 	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 	vplt.show(mesh, trainPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outDir, 'fig{:g}.png'.format(idx)), returnNumpy=False)
 	vplt.close()
 
 	idx += 1
+	# MAGIC-LAT interpolation w/ground truth, anterior, gist_rainbow colormap
 	estPoints = Points(vertices, r=r).cmap(colormap, latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	coloredMesh = Mesh([vertices, faces])
 	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outDir, 'fig{:g}.png'.format(idx)), returnNumpy=False)
 	vplt.close()
 
+	# MAGIC-LAT interpolation w/ablations, anterior, gist_rainbow colormap
 	if ablFile != None:
 		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
@@ -347,14 +335,16 @@ def plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstG
 		vplt.close()
 
 	idx += 1
+	# GPR interpolation w/ground truth, anterior, gist_rainbow colormap
 	estPoints = Points(vertices, r=r).cmap(colormap, latEstGPR, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	coloredMesh = Mesh([vertices, faces])
 	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outDir, 'fig{:g}.png'.format(idx)), returnNumpy=False)
 	vplt.close()
 
+	# GPR interpolation w/ablations, anterior, gist_rainbow colormap
 	if ablFile != None:
 		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
@@ -362,14 +352,16 @@ def plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstG
 		vplt.close()
 
 	idx += 1
+	# GPMI (quLATi) interpolation w/ground truth, anterior, gist_rainbow colormap
 	estPoints = Points(vertices, r=r).cmap(colormap, latEstqulati, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	coloredMesh = Mesh([vertices, faces])
 	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outDir, 'fig{:g}.png'.format(idx)), returnNumpy=False)
 	vplt.close()
 
+	# GPMI (quLATi) interpolation w/ablations, anterior, gist_rainbow colormap
 	if ablFile != None:
 		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
@@ -379,20 +371,23 @@ def plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstG
 	idx += 1
 	a -= 180
 
+	# Training points (posterior view), gist_rainbow
 	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 	vplt.show(mesh, trainPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outDir, 'fig{:g}.png'.format(idx)), returnNumpy=False)
 	vplt.close()
 
 	idx += 1
+	# MAGIC-LAT interpolation w/ground truth, posterior, gist_rainbow colormap
 	estPoints = Points(vertices, r=r).cmap(colormap, latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	coloredMesh = Mesh([vertices, faces])
 	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outDir, 'fig{:g}.png'.format(idx)), returnNumpy=False)
 	vplt.close()
 
+	# MAGIC-LAT interpolation w/ablations, posterior, gist_rainbow colormap
 	if ablFile != None:
 		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
@@ -400,14 +395,16 @@ def plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstG
 		vplt.close()
 
 	idx += 1
+	# GPR interpolation w/ground truth, posterior, gist_rainbow colormap
 	estPoints = Points(vertices, r=r).cmap(colormap, latEstGPR, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	coloredMesh = Mesh([vertices, faces])
 	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outDir, 'fig{:g}.png'.format(idx)), returnNumpy=False)
 	vplt.close()
 
+	# GPR interpolation w/ablations, posterior, gist_rainbow colormap
 	if ablFile != None:
 		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
@@ -415,128 +412,20 @@ def plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstG
 		vplt.close()
 
 	idx += 1
+	# GPMI (quLATi) interpolation w/ground truth, posterior, gist_rainbow colormap
 	estPoints = Points(vertices, r=r).cmap(colormap, latEstqulati, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	coloredMesh = Mesh([vertices, faces])
 	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
 	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
+	vplt.screenshot(filename=os.path.join(outDir, 'fig{:g}.png'.format(idx)), returnNumpy=False)
 	vplt.close()
 
+	# GPMI (quLATi) interpolation w/ablations, posterior, gist_rainbow colormap
 	if ablFile != None:
 		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
 		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
 		vplt.screenshot(filename=os.path.join(outDir, 'a7.png'), returnNumpy=False)
-		vplt.close()
-
-	idx += 1
-	colormap = 'viridis_r'
-	a += 180
-
-	verPoints = Points(latCoords, r=r).cmap(colormap, latVals, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	trainPoints = Points(TrCoord, r=r).cmap(colormap, TrVal, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-
-	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-	vplt.show(mesh, trainPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
-	vplt.close()
-
-	idx += 1
-	estPoints = Points(vertices, r=r).cmap(colormap, latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	coloredMesh = Mesh([vertices, faces])
-	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
-	vplt.close()
-
-	if ablFile != None:
-		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
-		vplt.screenshot(filename=os.path.join(outDir, 'a9.png'), returnNumpy=False)
-		vplt.close()
-
-	idx += 1
-	estPoints = Points(vertices, r=r).cmap(colormap, latEstGPR, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	coloredMesh = Mesh([vertices, faces])
-	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
-	vplt.close()
-
-	if ablFile != None:
-		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
-		vplt.screenshot(filename=os.path.join(outDir, 'a10.png'), returnNumpy=False)
-		vplt.close()
-
-	idx += 1
-	estPoints = Points(vertices, r=r).cmap(colormap, latEstqulati, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	coloredMesh = Mesh([vertices, faces])
-	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
-	vplt.close()
-
-	if ablFile != None:
-		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
-		vplt.screenshot(filename=os.path.join(outDir, 'a11.png'), returnNumpy=False)
-		vplt.close()
-
-	idx += 1
-	a -= 180
-
-	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-	vplt.show(mesh, trainPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
-	vplt.close()
-
-	idx += 1
-	estPoints = Points(vertices, r=r).cmap(colormap, latEst, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	coloredMesh = Mesh([vertices, faces])
-	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
-	vplt.close()
-
-	if ablFile != None:
-		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
-		vplt.screenshot(filename=os.path.join(outDir, 'a13.png'), returnNumpy=False)
-		vplt.close()
-
-	idx += 1
-	estPoints = Points(vertices, r=r).cmap(colormap, latEstGPR, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	coloredMesh = Mesh([vertices, faces])
-	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
-	vplt.close()
-
-	if ablFile != None:
-		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
-		vplt.screenshot(filename=os.path.join(outDir, 'a14.png'), returnNumpy=False)
-		vplt.close()
-
-	idx += 1
-	estPoints = Points(vertices, r=r).cmap(colormap, latEstqulati, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	coloredMesh = Mesh([vertices, faces])
-	coloredMesh.interpolateDataFrom(estPoints, N=1).cmap(colormap, vmin=MINLAT, vmax=MAXLAT).addScalarBar(title='LAT (ms)   ', titleFontSize=fontSize, size=size)
-	vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-	vplt.show(coloredMesh, verPoints, azimuth=a, elevation=e, roll=r)
-	vplt.screenshot(filename=os.path.join(outDir, 'hella{:g}.png'.format(idx)), returnNumpy=False)
-	vplt.close()
-
-	if ablFile != None:
-		vplt = Plotter(shape=(1,1), N=1, offscreen=True)
-		vplt.show(coloredMesh, ablPoints, azimuth=a, elevation=e, roll=r)
-		vplt.screenshot(filename=os.path.join(outDir, 'a15.png'), returnNumpy=False)
 		vplt.close()
 
 

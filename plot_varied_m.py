@@ -1,3 +1,18 @@
+"""
+--------------------------------------------------------------------------------
+Plots results for cross-validation over multiple input sizes..
+--------------------------------------------------------------------------------
+
+Description: Plots results of test_varied_m.py
+
+Requirements: os, math, matplotlib
+
+File: plot_varied_m.py
+
+Author: Jennifer Hellar
+Email: jennifer.hellar@rice.edu
+--------------------------------------------------------------------------------
+"""
 import os
 
 # plotting packages
@@ -46,10 +61,10 @@ def plot_single(fileDir, patient, id, title):
 	leg = ['GPR', 'GPMI', 'MAGIC-LAT']
 
 	# beta on the x-axis, one line per alpha value
-	fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(10,8))
-	ax.plot(m[1:], gprMean[1:], 's-')
-	ax.plot(m[1:], quLATiMean[1:], '^-')
-	ax.plot(m[1:], magicMean[1:], 'D-')
+	fig, ax = plt.subplots(nrows = 1, ncols = 1, figsize=(14,22))
+	ax.plot(m[1:], gprMean[1:], 's-', linewidth=5, ms=15)
+	ax.plot(m[1:], quLATiMean[1:], '^-', linewidth=5, ms=15)
+	ax.plot(m[1:], magicMean[1:], 'D-', linewidth=5, ms=15)
 
 	# ax.errorbar(m, magicMean, yerr = magicStd, capsize = 4)
 	# ax.scatter(m, magicMean)
@@ -61,15 +76,17 @@ def plot_single(fileDir, patient, id, title):
 	# ax.scatter(m, quLATiMean)
 
 	ax.grid(True)
-	ax.set_title(r'$\Delta$E* vs m, ' + title, size='18')
-	ax.set_xlabel('m', size=14)
-	plt.xticks(m[1:], m[1:], rotation = 'vertical', size=12)
+	ax.set_title(title, size='36')
+	ax.set_xlabel('Number of LAT observations (m)', size=30)
+	plt.xticks(m[1:], m[1:], rotation = 'vertical', size=24)
 
 	ymax = math.ceil(max(max(gprMean), max(quLATiMean), max(magicMean))/5)*5
-	plt.ylim((0, 20))
-	plt.yticks(size=12)
-	ax.set_ylabel(r'$\Delta$E*', size=14)
-	ax.legend(leg, fontsize=14)
+	if patient == '035':
+		ymax = 10
+	plt.ylim((0, ymax))
+	plt.yticks(size=24)
+	ax.set_ylabel('Mean Delta-E (MDE)', size=30)
+	ax.legend(leg, fontsize=30, loc='lower right')
 
 	plt.show()
 

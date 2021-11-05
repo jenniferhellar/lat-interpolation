@@ -1,39 +1,41 @@
-
 """
+--------------------------------------------------------------------------------
+Executes GPR, GPMI, and MAGIC-LAT 1x for 1 map and saves the visual results..
+--------------------------------------------------------------------------------
 
-usage: test.py [-h] -i IDX [-v VERBOSE] [-t TEXT]
+usage: test.py [-h] -i IDX -a ANOMALIES_REMOVED [-v VERBOSE] [-t TEXT]
 
 Processes a single mesh file for comparison of MAGIC-LAT, GPR, and quLATi performance.
 
 optional arguments:
   -h, --help            show this help message and exit
   -i IDX, --idx IDX     Data index to process. Default: 11
+  -a ANOMALIES_REMOVED, --anomalies_removed ANOMALIES_REMOVED
+                        Remove anomalous points (disable: 0, enable: 1). Default: 1
   -v VERBOSE, --verbose VERBOSE
                         Verbose output (disable: 0, enable: 1). Default: 1
   -t TEXT, --text TEXT  Generate text-only outputs (disable: 0, enable: 1). Default: 0
 
 DATA INDICES:
-	Too large for my laptop:
-		p031 = 0 (4-SINUS LVFAM)
-		p032 = 1 (1-LVFAM LAT HYB), 2 (2-LVFAM INITIAL PVC), 3 (4-LVFAM SINUS)
-		p037 = 10 (12-LV-SINUS)
-
-	Testable:
 		p033 = 4 (3-RV-FAM-PVC-A-NORMAL), 5 (4-RV-FAM-PVC-A-LAT-HYBRID)
 		p034 = 6 (4-RVFAM-LAT-HYBRID), 7 (5-RVFAM-PVC), 8 (6-RVFAM-SINUS-VOLTAGE)
 		p035 = 9 (8-SINUS)
 		p037 = 11 (9-RV-SINUS-VOLTAGE)
 
 Requirements: 
-	os, platform, argparse,
+	os, argparse,
 	numpy, math, random, 
-	vedo, matplotlib, scikit-learn, scipy, cv2, colour
+	vedo, scikit-learn,
 	quLATi, robust_laplacian
+
+File: test.py
+
+Author: Jennifer Hellar
+Email: jenniferhellar@gmail.com
+--------------------------------------------------------------------------------
 """
-from timeit import default_timer as timer
 
 import os
-
 import argparse
 
 import numpy as np
@@ -205,11 +207,7 @@ TstVal = [mapLAT[i] for i in TstIdx]
 if verbose:
 	print('\tBeginning MAGIC-LAT computation...')
 
-# start = timer()
 latEst = magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
-# stop = timer()
-# print(stop-start)
-# exit(0)
 
 
 """ GPR estimate """
@@ -237,30 +235,26 @@ latEstquLATi = quLATiHelper.quLATi(TrIdx, TrVal, vertices, model)
 if not visualSuppressed:
 	elev, azimuth, roll = utils.getPerspective(patient)
 
-	"""
-	Figure 0: Ground truth (entire), training points, and MAGIC-LAT (entire)
-	"""
+	# MAGIC-LAT results (multiple subfigures)
 	utils.plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEst, 
 		azimuth, elev, roll, MINLAT, MAXLAT,
 		outSubDir, title='MAGIC-LAT', filename='magic', ablFile=ablFile)
 
-	"""
-	Figure 1: Ground truth (entire), training points, and GPR (entire)
-	"""
+	# GPR results (multiple subfigures)
 	utils.plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstGPR, 
 		azimuth, elev, roll, MINLAT, MAXLAT,
 		outSubDir, title='GPR', filename='gpr', ablFile=ablFile)
 
-	"""
-	Figure 2: Ground truth (entire), training points, and quLATi (entire)
-	"""
+	# GPMI (quLATi) results (multiple subfigures)
 	utils.plotSaveEntire(mesh, latCoords, latVals, TrCoord, TrVal, latEstquLATi, 
 		azimuth, elev, roll, MINLAT, MAXLAT,
 		outSubDir, title='quLATi', filename='quLATi', ablFile=ablFile)
 
+	# Compare colormap representations of the same interpolation
 	utils.plotSaveTwoColorMaps(mesh, latEst,
 		azimuth, elev, roll, MINLAT, MAXLAT, outSubDir, 'gist_rainbow', 'viridis_r', filename='raw')
 
+	# Plot all results as individual figures, anterior and posterior views
 	utils.plotSaveIndividual(mesh, latCoords, latVals, TrCoord, TrVal, latEst, latEstGPR, latEstquLATi,
 		azimuth, elev, roll, MINLAT, MAXLAT, outSubDir, idx=7, ablFile=ablFile)
 """

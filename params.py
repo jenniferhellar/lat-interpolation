@@ -7,24 +7,21 @@ Description: Computes MAGIC-LAT error metrics for test sets of 100 vertices with
 either coarse or fine regularization parameters.  Results written out to text
 files.
 
-Results independently plotted in 
-	reg_params_coarse.png
-	reg_params_fine.png.
+Results independently plotted.
 
-Requirements: os, numpy, sklearn, scipy, math
+Requirements: os, argparse, numpy, math, random
 
-File: test_reg_params.py
+File: params.py
 
-Date: 05/24/2021
+Date: 11/05/2021
 
 Author: Jennifer Hellar
-Email: jennifer.hellar@rice.edu
+Email: jenniferhellar@gmail.com
 --------------------------------------------------------------------------------
 """
 
-import time
-
 import os
+import argparse
 
 import numpy as np
 import math
@@ -34,20 +31,12 @@ import random
 from readMesh import readMesh
 from readLAT import readLAT
 
+import utils
+import metrics
+from const import DATADIR, DATAFILES
+from magicLAT import magicLAT
 
-from utils import *
-from const import *
-from magicLAT import *
 
-"""
-p033 = 9
-p034 = 14
-p035 = 18
-p037 = 21
-"""
-PATIENT_MAP				=		14
-
-NUM_TEST_REPEATS 		= 		50
 NUM_TRAIN_SAMPS 		= 		100
 EDGE_THRESHOLD			=		50
 
@@ -61,11 +50,35 @@ else:
 	print('fine-tuned params not selected')
 	exit(0)
 
-""" Read the files """
-meshFile = meshNames[PATIENT_MAP]
-latFile = latNames[PATIENT_MAP]
+
+""" Parse the input for data index argument. """
+parser = argparse.ArgumentParser(
+    description='Processes a single mesh file repeatedly for comparison of MAGIC-LAT, GPR, and quLATi performance.')
+
+parser.add_argument('-i', '--idx', required=True, default='11',
+                    help='Data index to process. \
+                    Default: 11')
+
+parser.add_argument('-a', '--anomalies_removed', required=False, default=1,
+                    help='Remove anomalous points (disable: 0, enable: 1). \
+                    Default: 1')
+
+parser.add_argument('-r', '--repeat', required=True, default=20,
+                    help='Number of test repetitions. \
+                    Default: 20')
+
+args = parser.parse_args()
+
+PATIENT_IDX				=		int(vars(args)['idx'])
+NUM_TEST_REPEATS		=		int(vars(args)['repeat'])
+remove_anomalies		=		int(vars(args)['anomalies_removed'])
+
+""" Obtain file names, patient number, mesh id, etc. """
+(meshFile, latFile, ablFile) = DATAFILES[PATIENT_IDX]
+
 nm = meshFile[0:-5]
 patient = nm[7:10]
+id = latFile.split('_')[3]
 
 # create a results directory
 resDir = os.path.join('..','res_reg')
@@ -84,28 +97,44 @@ resFileMAE = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_mae.txt'.format(patient
 with open(resFileMAE, 'w') as fid:
 	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
 
-resFileDE1976 = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_de1976.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
-with open(resFileDE1976, 'w') as fid:
-	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
-
 resFileDE2000 = os.path.join(resDir, 'p{}_t{:g}_m{:g}_r{:g}_de2000.txt'.format(patient, EDGE_THRESHOLD, NUM_TRAIN_SAMPS, NUM_TEST_REPEATS))
 with open(resFileDE2000, 'w') as fid:
 	fid.write('{:<20}{:<20}{:<20}{:<20}'.format('alpha', 'beta', 'mean', 'std'))
 
 print('Reading files for ' + nm + ' ...\n')
-[vertices, faces] = readMesh(os.path.join(dataDir, meshFile))
-[OrigLatCoords, OrigLatVals] = readLAT(os.path.join(dataDir, latFile))
+[vertices, faces] = readMesh(os.path.join(DATADIR, meshFile))
+[OrigLatCoords, OrigLatVals] = readLAT(os.path.join(DATADIR, latFile))
 
 n = len(vertices)
 
 mapIdx = [i for i in range(n)]
 mapCoord = [vertices[i] for i in mapIdx]
 
-allLatIdx, allLatCoord, allLatVal = mapSamps(mapIdx, mapCoord, OrigLatCoords, OrigLatVals)
+allLatIdx, allLatCoord, allLatVal = utils.mapSamps(mapIdx, mapCoord, OrigLatCoords, OrigLatVals)
 
 M = len(allLatIdx)
 
-anomalous = isAnomalous(allLatCoord, allLatVal, k=6, d=5, thresh=50)
+# Identify and exclude anomalous LAT samples
+anomalous = np.zeros(M)
+if remove_anomalies:
+	anomIdx = []	
+	if PATIENT_IDX == 4:
+		anomIdx = [25, 112, 159, 218, 240, 242, 264]
+	elif PATIENT_IDX == 5:
+		anomIdx = [119, 150, 166, 179, 188, 191, 209, 238]
+	elif PATIENT_IDX == 6:
+		anomIdx = [11, 12, 59, 63, 91, 120, 156]
+	elif PATIENT_IDX ==7:
+		anomIdx = [79, 98, 137, 205]
+	elif PATIENT_IDX == 8:
+		anomIdx = [10, 11, 51, 56, 85, 105, 125, 143, 156, 158, 169, 181, 210, 269, 284, 329, 336, 357, 365, 369, 400, 405]
+	elif PATIENT_IDX == 9:
+		anomIdx = [0, 48, 255, 322]
+	else:
+		anomalous = utils.isAnomalous(allLatCoord, allLatVal)
+	anomalous[anomIdx] = 1
+else:
+	anomalous = [0 for i in range(M)]
 
 numPtsIgnored = np.sum(anomalous)
 
@@ -119,20 +148,10 @@ mapLAT = [0 for i in range(n)]
 for i in range(M):
 	mapLAT[latIdx[i]] = latVals[i]
 
-edgeFile = os.path.join('..', 'E_p{}.npy'.format(patient))
-if not os.path.isfile(edgeFile):
-	[edges, TRI] = edgeMatrix(vertices, faces)
-
-	print('Writing edge matrix to file...')
-	with open(edgeFile, 'wb') as fid:
-		np.save(fid, edges)
-else:
-	edges = np.load(edgeFile, allow_pickle=True)
-
 
 
 """ Sampling """
-sampLst = getModifiedSampList(latVals)
+sampLst = utils.getModifiedSampList(latVals)
 
 MINLAT = math.floor(min(allLatVal)/10)*10
 MAXLAT = math.ceil(max(allLatVal)/10)*10
@@ -148,7 +167,6 @@ for a_idx in range(len(alphas)):
 		magicNMSE = [0 for i in range(NUM_TEST_REPEATS)]
 		magicSNR = [0 for i in range(NUM_TEST_REPEATS)]
 		magicMAE = [0 for i in range(NUM_TEST_REPEATS)]
-		magicDE1976 = [0 for i in range(NUM_TEST_REPEATS)]
 		magicDE2000 = [0 for i in range(NUM_TEST_REPEATS)]
 
 		for test in range(NUM_TEST_REPEATS):
@@ -174,17 +192,17 @@ for a_idx in range(len(alphas)):
 
 
 			""" MAGIC-LAT estimate """
-			latEst = magicLAT(vertices, faces, edges, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD, alpha, beta)
+			latEst = magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD, alpha, beta)
 
 
 			""" Error metrics """
 			TstVal = [mapLAT[i] for i in TstIdx]
 			TstValEst = latEst[TstIdx]
 
-			magicNMSE[test] = calcNMSE(TstVal, TstValEst)
-			magicSNR[test] = calcSNR(TstVal, TstValEst)
-			magicMAE[test] = calcMAE(TstVal, TstValEst)
-			magicDE1976[test], magicDE2000[test] = deltaE(TstVal, TstValEst, MINLAT, MAXLAT)
+			magicNMSE[test] = metrics.calcNMSE(TstVal, TstValEst)
+			magicSNR[test] = metrics.calcSNR(TstVal, TstValEst)
+			magicMAE[test] = metrics.calcMAE(TstVal, TstValEst)
+			magicDE2000[test] = metrics.deltaE(TstVal, TstValEst, MINLAT, MAXLAT)
 
 
 		with open(resFileNMSE, 'a') as fid:
@@ -198,10 +216,6 @@ for a_idx in range(len(alphas)):
 		with open(resFileMAE, 'a') as fid:
 			fid.write('\n')
 			fid.write('{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}'.format(alpha, beta, np.average(magicMAE), np.std(magicMAE)))
-
-		with open(resFileDE1976, 'a') as fid:
-			fid.write('\n')
-			fid.write('{:<20.6f}{:<20.6f}{:<20.6f}{:<20.6f}'.format(alpha, beta, np.average(magicDE1976), np.std(magicDE1976)))
 
 		with open(resFileDE2000, 'a') as fid:
 			fid.write('\n')

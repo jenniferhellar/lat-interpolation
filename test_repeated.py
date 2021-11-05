@@ -1,19 +1,40 @@
-
 """
+--------------------------------------------------------------------------------
+Executes GPR, GPMI, and MAGIC-LAT repeatedly and randomly for 1 map and saves 
+the performance metric results
+--------------------------------------------------------------------------------
+
+usage: test_repeated.py [-h] -i IDX [-a ANOMALIES_REMOVED] -r REPEAT [-v VERBOSE]
+
+Processes a single mesh file repeatedly for comparison of MAGIC-LAT, GPR, and quLATi performance.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i IDX, --idx IDX     Data index to process. Default: 11
+  -a ANOMALIES_REMOVED, --anomalies_removed ANOMALIES_REMOVED
+                        Remove anomalous points (disable: 0, enable: 1). Default: 1
+  -r REPEAT, --repeat REPEAT
+                        Number of test repetitions. Default: 20
+  -v VERBOSE, --verbose VERBOSE
+                        Verbose output (disable: 0, enable: 1). Default: 1
 
 DATA INDICES:
-	Too large for my laptop:
-		p031 = 0 (4-SINUS LVFAM)
-		p032 = 1 (1-LVFAM LAT HYB), 2 (2-LVFAM INITIAL PVC), 3 (4-LVFAM SINUS)
-		p037 = 10 (12-LV-SINUS)
-
-	Testable:
 		p033 = 4 (3-RV-FAM-PVC-A-NORMAL), 5 (4-RV-FAM-PVC-A-LAT-HYBRID)
 		p034 = 6 (4-RVFAM-LAT-HYBRID), 7 (5-RVFAM-PVC), 8 (6-RVFAM-SINUS-VOLTAGE)
 		p035 = 9 (8-SINUS)
 		p037 = 11 (9-RV-SINUS-VOLTAGE)
 
 Requirements: 
+	os, argparse, timeit
+	numpy, math, random, 
+	vedo, scikit-learn,
+	quLATi, robust_laplacian
+
+File: test_repeated.py
+
+Author: Jennifer Hellar
+Email: jenniferhellar@gmail.com
+--------------------------------------------------------------------------------
 """
 
 import os
@@ -201,10 +222,10 @@ for test in range(NUM_TEST_REPEATS):
 
 
 	""" MAGIC-LAT estimate """
-	# start = timer()
+	start = timer()
 	latEst = magicLAT(vertices, faces, TrIdx, TrCoord, TrVal, EDGE_THRESHOLD)
-	# stop = timer()
-	# print(stop-start)
+	stop = timer()
+	print(stop-start)
 
 	""" GPR estimate """
 	gpr.fit(TrCoord, TrVal)

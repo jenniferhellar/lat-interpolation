@@ -1,5 +1,21 @@
 
 """
+--------------------------------------------------------------------------------
+Executes GPR, GPMI, and MAGIC-LAT across multiple input sizes and records the 
+performance metric results.
+--------------------------------------------------------------------------------
+
+usage: test_varied_m.py [-h] -i IDX [-a ANOMALIES_REMOVED] -r REPEAT
+
+Tests MAGIC-LAT, GPR, and quLATi performance across multiple input sizes.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i IDX, --idx IDX     Data index to process. Default: 11
+  -a ANOMALIES_REMOVED, --anomalies_removed ANOMALIES_REMOVED
+                        Remove anomalous points (disable: 0, enable: 1). Default: 1
+  -r REPEAT, --repeat REPEAT
+                        Number of test repetitions. Default: 25
 
 DATA INDICES:
 	Too large for my laptop:
@@ -14,6 +30,13 @@ DATA INDICES:
 		p037 = 11 (9-RV-SINUS-VOLTAGE)
 
 Requirements: 
+	os, argparse,
+	numpy, math, random, 
+	vedo, scikit-learn,
+	quLATi, robust_laplacian
+
+Author: Jennifer Hellar
+Email: jenniferhellar@gmail.com
 """
 
 import os
@@ -41,8 +64,6 @@ from magicLAT import magicLAT
 import quLATiHelper
 
 
-
-
 EDGE_THRESHOLD			=		50
 
 OUTDIR				 	=		'test_varied_m_results'
@@ -51,7 +72,7 @@ m						=		[25, 50, 75, 100, 125, 150, 175, 200, 225, 250]
 
 """ Parse the input for data index argument. """
 parser = argparse.ArgumentParser(
-    description='Processes a single mesh file repeatedly for comparison of MAGIC-LAT, GPR, and quLATi performance.')
+    description='Tests MAGIC-LAT, GPR, and quLATi performance across multiple input sizes.')
 
 parser.add_argument('-i', '--idx', required=True, default='11',
                     help='Data index to process. \
@@ -65,15 +86,10 @@ parser.add_argument('-r', '--repeat', required=True, default=25,
                     help='Number of test repetitions. \
                     Default: 25')
 
-parser.add_argument('-v', '--verbose', required=False, default=1,
-                    help='Verbose output (disable: 0, enable: 1). \
-                    Default: 1')
-
 args = parser.parse_args()
 
 PATIENT_IDX				=		int(vars(args)['idx'])
 NUM_TEST_REPEATS		=		int(vars(args)['repeat'])
-verbose					=		int(vars(args)['verbose'])
 remove_anomalies		=		int(vars(args)['anomalies_removed'])
 
 """ Obtain file names, patient number, mesh id, etc. """

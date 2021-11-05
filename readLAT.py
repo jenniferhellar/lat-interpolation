@@ -27,7 +27,7 @@ File contents:
 Requirements: numpy
 
 Author: Jennifer Hellar
-Email: jennifer.hellar@rice.edu
+Email: jenniferhellar@gmail.com
 --------------------------------------------------------------------------------
 """
 import numpy as np
